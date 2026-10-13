@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.5.0] — 2026-10-13
 
 ### Ajouté
 - **Entité météo** `weather.<station>` pour la carte Prévisions météo et Assist : relevés de la station et état du ciel déduit de ses capteurs (pluie, vent fort, rayonnement ou luminosité).
