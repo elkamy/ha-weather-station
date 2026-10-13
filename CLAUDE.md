@@ -32,3 +32,4 @@ python -m pytest                                              # tests_ha/: real 
 - `www/` at the repo root holds an **identical copy** of the card for manual installation; keep it in sync.
 - When the version changes, update `manifest.json` `version`, `CARD_VERSION` in `__init__.py` and `CHANGELOG.md` (French, "Non publié" section for unreleased changes).
 - Adding a new kind of sensor to the station: add its config key to `EXTRA_SENSORS` (const), `SENSOR_FIELDS` (config flow), the translations, and `WEATHER_STATION_EXTRAS` in the card.
+- `docs/brand/weather-station-icon.svg` is the single source of the emblem (HACS requires brand assets). `custom_components/weather_station/brand/icon.svg` is a copy, `icon.png` and `icon@2x.png` are rendered from it (headless Chrome, 256 and 512 px, transparent background): regenerate all three when it changes.
