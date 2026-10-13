@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.3.0] — 2026-10-13
 
 ### Ajouté
 - **Réinitialiser les mesures** : dans les options de l'intégration, après confirmation, toutes les mesures de pluie repartent de zéro et l'historique des graphiques de pluie est effacé. Aussi disponible en action `weather_station.reset_rain` pour les scripts et automatisations.
