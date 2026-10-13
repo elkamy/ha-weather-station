@@ -62,6 +62,13 @@
   "options": {
     "step": {
       "init": {
+        "title": "Options de la station",
+        "menu_options": {
+          "settings": "Réglages du pluviomètre",
+          "reset": "Réinitialiser les mesures"
+        }
+      },
+      "settings": {
         "title": "Réglages du pluviomètre",
         "data": {
           "mm_per_tip": "Pluie par basculement",
@@ -73,7 +80,24 @@
           "debounce_seconds": "Ignore un basculement survenant moins de ce délai après le précédent (faux contacts). 0 pour tout compter.",
           "rain_window_minutes": "Sans basculement pendant ce délai, la pluie est considérée comme terminée."
         }
+      },
+      "reset": {
+        "title": "Réinitialiser les mesures",
+        "description": "Remet à zéro toutes les mesures de pluie de {station_name} : cumuls du jour, de la semaine, du mois et de l'année, pluie totale, pluie glissante et dernière pluie. L'historique des graphiques de pluie (7 jours, 30 jours, pluie par mois) est aussi effacé. Cette action est irréversible.",
+        "data": {
+          "confirm": "Je confirme la remise à zéro"
+        },
+        "data_description": {
+          "confirm": "Cochez la case puis validez pour tout remettre à zéro."
+        }
       }
+    },
+    "error": {
+      "confirm_required": "Cochez la case de confirmation pour réinitialiser les mesures."
+    },
+    "abort": {
+      "reset_done": "Les mesures de pluie ont été remises à zéro.",
+      "station_not_loaded": "La station n'est pas chargée : réessayez une fois l'intégration démarrée."
     }
   },
   "entity": {
@@ -116,6 +140,23 @@
       "raining": {
         "name": "Il pleut"
       }
+    }
+  },
+  "services": {
+    "reset_rain": {
+      "name": "Réinitialiser les mesures de pluie",
+      "description": "Remet à zéro toutes les mesures de pluie d'une station et efface l'historique de ses graphiques de pluie. Irréversible.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Station",
+          "description": "La station Weather Station à réinitialiser."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "station_not_loaded": {
+      "message": "Cette station Weather Station n'existe pas ou n'est pas chargée."
     }
   }
 }

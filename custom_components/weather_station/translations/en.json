@@ -62,6 +62,13 @@
   "options": {
     "step": {
       "init": {
+        "title": "Station options",
+        "menu_options": {
+          "settings": "Rain gauge settings",
+          "reset": "Reset measurements"
+        }
+      },
+      "settings": {
         "title": "Rain gauge settings",
         "data": {
           "mm_per_tip": "Rain per tip",
@@ -73,7 +80,24 @@
           "debounce_seconds": "Ignores a tip coming less than this delay after the previous one (contact bounce). 0 counts everything.",
           "rain_window_minutes": "Without any tip for this delay, the rain is considered over."
         }
+      },
+      "reset": {
+        "title": "Reset measurements",
+        "description": "Resets every rain measurement of {station_name}: today's, this week's, this month's and this year's totals, total rain, rolling rain and last rain. The history of the rain charts (7 days, 30 days, rain per month) is cleared too. This cannot be undone.",
+        "data": {
+          "confirm": "I confirm the reset"
+        },
+        "data_description": {
+          "confirm": "Tick the box and submit to reset everything."
+        }
       }
+    },
+    "error": {
+      "confirm_required": "Tick the confirmation box to reset the measurements."
+    },
+    "abort": {
+      "reset_done": "The rain measurements were reset.",
+      "station_not_loaded": "The station is not loaded: try again once the integration has started."
     }
   },
   "entity": {
@@ -116,6 +140,23 @@
       "raining": {
         "name": "Raining"
       }
+    }
+  },
+  "services": {
+    "reset_rain": {
+      "name": "Reset rain measurements",
+      "description": "Resets every rain measurement of a station and clears the history of its rain charts. Cannot be undone.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Station",
+          "description": "The Weather Station to reset."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "station_not_loaded": {
+      "message": "This Weather Station does not exist or is not loaded."
     }
   }
 }

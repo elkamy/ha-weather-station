@@ -1,0 +1,7 @@
+reset_rain:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: weather_station

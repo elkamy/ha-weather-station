@@ -76,6 +76,10 @@ async def test_calibration_change_applies_to_totals(hass: HomeAssistant) -> None
     hass.states.async_set(RAIN, "off")
     await hass.async_block_till_done()
     result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "settings"}
+    )
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {"mm_per_tip": 0.3, "debounce_seconds": 0, "rain_window_minutes": 30},

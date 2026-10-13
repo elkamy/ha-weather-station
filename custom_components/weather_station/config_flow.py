@@ -31,6 +31,7 @@ from .const import (
 )
 
 DEFAULT_STATION_NAME = "Station météo"
+CONF_CONFIRM = "confirm"
 
 # Optional sensors of the station: config key and the sensor device class.
 # Wind, UV and light sensors often lack a device class (or a direction sensor
@@ -203,12 +204,39 @@ class WeatherStationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class WeatherStationOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
+        return self.async_show_menu(step_id="init", menu_options=["settings", "reset"])
+
+    async def async_step_reset(self, user_input=None):
+        """Start the rain totals again from zero, after a confirmation."""
+        errors = {}
+        if user_input is not None:
+            if not user_input.get(CONF_CONFIRM):
+                errors[CONF_CONFIRM] = "confirm_required"
+            elif self.config_entry.state is not config_entries.ConfigEntryState.LOADED:
+                return self.async_abort(reason="station_not_loaded")
+            else:
+                from . import async_reset_rain
+
+                await async_reset_rain(self.hass, self.config_entry)
+                return self.async_abort(reason="reset_done")
+        return self.async_show_form(
+            step_id="reset",
+            data_schema=vol.Schema({
+                vol.Required(CONF_CONFIRM, default=False): selector.BooleanSelector(),
+            }),
+            errors=errors,
+            description_placeholders={
+                "station_name": self.config_entry.data.get(CONF_STATION_NAME, self.config_entry.title)
+            },
+        )
+
+    async def async_step_settings(self, user_input=None):
         if user_input is not None:
             return self.async_create_entry(data={**self.config_entry.options, **user_input})
 
         options = self.config_entry.options
         return self.async_show_form(
-            step_id="init",
+            step_id="settings",
             data_schema=vol.Schema({
                 vol.Required(
                     CONF_MM_PER_TIP, default=options.get(CONF_MM_PER_TIP, DEFAULT_MM_PER_TIP)

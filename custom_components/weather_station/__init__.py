@@ -6,8 +6,11 @@ from datetime import timedelta
 from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
+from homeassistant.exceptions import ServiceValidationError
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import entity_registry as er
+import voluptuous as vol
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -37,6 +40,8 @@ PLATFORMS = ["sensor", "binary_sensor"]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 RAIN_STORE_KEY = f"{DOMAIN}.rain"
+SERVICE_RESET_RAIN = "reset_rain"
+ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 STORE_VERSION = 1
 CARD_FILES = ("weather-station-card.js", "weather-station-dashboard.js")
 # Bump when changing the card JavaScript to invalidate browser caches.
@@ -158,12 +163,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     gauge = RainGauge.from_dict(
         stored if stored.get("entity") == rain_entity else None, mm_per_tip, debounce
     )
-    entry.runtime_data = {"rain": gauge}
 
     @callback
     def _save() -> None:
         store_data[entry.entry_id] = {**gauge.as_dict(), "entity": rain_entity}
         store.async_delay_save(lambda: store_data, 10)
+
+    async def _save_now() -> None:
+        store_data[entry.entry_id] = {**gauge.as_dict(), "entity": rain_entity}
+        await store.async_save(store_data)
+
+    entry.runtime_data = {"rain": gauge, "save_now": _save_now}
 
     if not stored and entry.data.get(CONF_IMPORT_HISTORY, DEFAULT_IMPORT_HISTORY):
         added = await _async_import_history(hass, gauge, rain_entity)
@@ -192,7 +202,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await _async_register_panel(hass)
+    _async_register_services(hass)
     return True
+
+
+def rain_statistic_ids(hass: HomeAssistant, entry: ConfigEntry) -> list[str]:
+    """Entity IDs of the station's rain sensors that have long-term statistics."""
+    from .sensor import RAIN_SENSORS
+
+    registry = er.async_get(hass)
+    return [
+        entity_id
+        for description in RAIN_SENSORS
+        if description.state_class is not None
+        and (entity_id := registry.async_get_entity_id(
+            "sensor", DOMAIN, f"{entry.entry_id}_{description.key}"
+        ))
+    ]
+
+
+async def async_reset_rain(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Start every rain total again from zero, charts included.
+
+    The tips are forgotten and the long-term statistics of the rain sensors
+    are cleared, so the 7 / 30 days and monthly charts start again too.
+    """
+    runtime = entry.runtime_data
+    runtime["rain"].reset()
+    await runtime["save_now"]()
+    if "recorder" in hass.config.components:
+        from homeassistant.components.recorder import get_instance
+
+        if statistic_ids := rain_statistic_ids(hass, entry):
+            get_instance(hass).async_clear_statistics(statistic_ids)
+    _LOGGER.info("Weather Station: rain measurements of %s reset", entry.title)
+    async_dispatcher_send(hass, signal_updated(entry.entry_id))
+
+
+@callback
+def _async_register_services(hass: HomeAssistant) -> None:
+    if hass.services.has_service(DOMAIN, SERVICE_RESET_RAIN):
+        return
+
+    async def _reset_rain(call: ServiceCall) -> None:
+        entry = hass.config_entries.async_get_entry(call.data[ATTR_CONFIG_ENTRY_ID])
+        if entry is None or entry.domain != DOMAIN or entry.state is not ConfigEntryState.LOADED:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="station_not_loaded"
+            )
+        await async_reset_rain(hass, entry)
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESET_RAIN,
+        _reset_rain,
+        schema=vol.Schema({vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string}),
+    )
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

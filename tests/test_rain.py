@@ -134,6 +134,21 @@ class RainGaugeTests(unittest.TestCase):
         self.assertEqual(hourly[-2], 1.0)
         self.assertEqual(sum(hourly), 3.0)
 
+    def test_reset(self):
+        gauge = rain.RainGauge(1.0)
+        gauge.add_tip(at())
+        gauge.add_tip(at(minute=1))
+        gauge.reset()
+        now = at(minute=2)
+        self.assertEqual(gauge.total, 0.0)
+        self.assertEqual(gauge.period_amount("day", now), 0.0)
+        self.assertEqual(gauge.rolling_amount(3600, now), 0.0)
+        self.assertIsNone(gauge.last_tip)
+        self.assertFalse(gauge.is_raining(now, 30))
+        # Counting starts again normally.
+        gauge.add_tip(at(minute=3))
+        self.assertEqual(gauge.period_amount("year", at(minute=4)), 1.0)
+
     def test_restore_ignores_corrupt_data(self):
         gauge = rain.RainGauge.from_dict({"total_tips": "x"}, mm_per_tip=1.0)
         self.assertEqual(gauge.total_tips, 0)

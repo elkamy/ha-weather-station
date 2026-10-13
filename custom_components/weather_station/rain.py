@@ -75,6 +75,13 @@ class RainGauge:
         self.prune(moment)
         return True
 
+    def reset(self) -> None:
+        """Forget every tip: all totals start again from zero."""
+        self.total_tips = 0
+        self.periods = {}
+        self.tips = []
+        self.last_tip = None
+
     def prune(self, now: datetime) -> None:
         limit = now.timestamp() - ROLLING_SECONDS
         self.tips = [tip for tip in self.tips if tip >= limit]

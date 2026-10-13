@@ -80,13 +80,25 @@ L'ajout d'une station se fait en deux étapes :
 
 Vous n'avez pas encore tous vos capteurs ? Ajoutez-les plus tard avec **Reconfigurer** depuis la carte de l'intégration. Le tableau de bord n'affiche que les relevés disponibles.
 
-Dans les **options** de l'intégration, on règle :
+Dans les **options** de l'intégration (**Réglages du pluviomètre**), on règle :
 
 | Option | Rôle | Par défaut |
 | --- | --- | --- |
 | Pluie par basculement | Quantité de pluie (mm) d'un basculement de l'auget | 0,524 mm |
 | Anti-rebond | Ignore un basculement trop proche du précédent (faux contact) | 0 s (tout compter) |
 | Fin de pluie après | Délai sans basculement au bout duquel la pluie est terminée | 30 min |
+
+### Réinitialiser les mesures
+
+Pour repartir de zéro (après un étalonnage à l'eau, une installation de test…), ouvrez les **options** de l'intégration puis **Réinitialiser les mesures**, cochez la confirmation et validez. Tous les cumuls de pluie repartent de zéro, et l'historique des graphiques de pluie (7 jours, 30 jours, pluie par mois) est effacé. Les réglages et les autres capteurs ne sont pas touchés. Cette action est irréversible.
+
+La même remise à zéro existe en action, utilisable dans un script ou une automatisation :
+
+```yaml
+action: weather_station.reset_rain
+data:
+  config_entry_id: 01J...   # la station, à choisir dans l'éditeur visuel
+```
 
 ### Calibrer le pluviomètre
 
