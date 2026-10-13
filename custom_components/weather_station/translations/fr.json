@@ -1,0 +1,85 @@
+{
+  "title": "Weather Station",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nouvelle station météo",
+        "description": "Choisissez le capteur d'ouverture de votre pluviomètre à auget basculeur : chaque changement d'état (ouvert ↔ fermé) compte un basculement.",
+        "data": {
+          "station_name": "Nom de la station",
+          "rain_entity": "Capteur du pluviomètre",
+          "mm_per_tip": "Pluie par basculement",
+          "import_history": "Importer l'historique déjà enregistré"
+        },
+        "data_description": {
+          "mm_per_tip": "Quantité de pluie (mm) correspondant à un basculement de l'auget. Modifiable ensuite dans les options.",
+          "import_history": "Reprend les basculements encore présents dans l'historique de Home Assistant (10 jours par défaut) pour ne pas repartir de zéro."
+        }
+      },
+      "sensors": {
+        "title": "Autres capteurs",
+        "description": "Ajoutez si vous le souhaitez les autres capteurs de {station_name}. Ils seront affichés sur la carte de la station. Tous sont facultatifs.",
+        "data": {
+          "battery_entity": "Batterie du pluviomètre",
+          "temperature_entity": "Température",
+          "humidity_entity": "Humidité",
+          "pressure_entity": "Pression atmosphérique",
+          "wind_speed_entity": "Vitesse du vent"
+        }
+      },
+      "reconfigure": {
+        "title": "Changer les capteurs",
+        "description": "Sélectionnez les capteurs de {station_name}. Videz un champ pour ne plus afficher ce capteur. Changer de pluviomètre remet les cumuls à zéro.",
+        "data": {
+          "rain_entity": "Capteur du pluviomètre",
+          "battery_entity": "Batterie du pluviomètre",
+          "temperature_entity": "Température",
+          "humidity_entity": "Humidité",
+          "pressure_entity": "Pression atmosphérique",
+          "wind_speed_entity": "Vitesse du vent"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Saisissez un nom de station.",
+      "rain_already_used": "Ce pluviomètre est déjà utilisé par une autre station."
+    },
+    "abort": {
+      "already_configured": "Ce pluviomètre est déjà utilisé par une station.",
+      "reconfigure_successful": "Les capteurs de la station ont été mis à jour."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Réglages du pluviomètre",
+        "data": {
+          "mm_per_tip": "Pluie par basculement",
+          "debounce_seconds": "Anti-rebond",
+          "rain_window_minutes": "Fin de pluie après"
+        },
+        "data_description": {
+          "mm_per_tip": "La nouvelle valeur s'applique aussi aux cumuls déjà enregistrés.",
+          "debounce_seconds": "Ignore un basculement survenant moins de ce délai après le précédent (faux contacts). 0 pour tout compter.",
+          "rain_window_minutes": "Sans basculement pendant ce délai, la pluie est considérée comme terminée."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "rain_today": { "name": "Pluie aujourd'hui" },
+      "rain_week": { "name": "Pluie cette semaine" },
+      "rain_month": { "name": "Pluie ce mois-ci" },
+      "rain_year": { "name": "Pluie cette année" },
+      "rain_last_hour": { "name": "Pluie dernière heure" },
+      "rain_last_24h": { "name": "Pluie dernières 24 h" },
+      "rain_rate": { "name": "Intensité de pluie" },
+      "rain_total": { "name": "Pluie totale" },
+      "last_rain": { "name": "Dernière pluie" }
+    },
+    "binary_sensor": {
+      "raining": { "name": "Il pleut" }
+    }
+  }
+}

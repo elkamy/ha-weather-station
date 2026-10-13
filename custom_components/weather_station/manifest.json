@@ -1,0 +1,20 @@
+{
+  "domain": "weather_station",
+  "name": "Weather Station",
+  "after_dependencies": [
+    "recorder"
+  ],
+  "codeowners": [
+    "@elkamy"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
+  "documentation": "https://github.com/elkamy/ha-weather-station",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/elkamy/ha-weather-station/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -1,0 +1,85 @@
+{
+  "title": "Weather Station",
+  "config": {
+    "step": {
+      "user": {
+        "title": "New weather station",
+        "description": "Choose the contact sensor of your tipping-bucket rain gauge: every state change (open ↔ closed) counts as one tip.",
+        "data": {
+          "station_name": "Station name",
+          "rain_entity": "Rain gauge sensor",
+          "mm_per_tip": "Rain per tip",
+          "import_history": "Import the recorded history"
+        },
+        "data_description": {
+          "mm_per_tip": "Amount of rain (mm) for one tip of the bucket. Can be changed later in the options.",
+          "import_history": "Replays the tips still kept in the Home Assistant history (10 days by default) so totals do not start from zero."
+        }
+      },
+      "sensors": {
+        "title": "Other sensors",
+        "description": "Optionally add the other sensors of {station_name}. They are shown on the station card. All are optional.",
+        "data": {
+          "battery_entity": "Rain gauge battery",
+          "temperature_entity": "Temperature",
+          "humidity_entity": "Humidity",
+          "pressure_entity": "Atmospheric pressure",
+          "wind_speed_entity": "Wind speed"
+        }
+      },
+      "reconfigure": {
+        "title": "Change sensors",
+        "description": "Select the sensors of {station_name}. Clear a field to stop showing that sensor. Changing the rain gauge resets the totals.",
+        "data": {
+          "rain_entity": "Rain gauge sensor",
+          "battery_entity": "Rain gauge battery",
+          "temperature_entity": "Temperature",
+          "humidity_entity": "Humidity",
+          "pressure_entity": "Atmospheric pressure",
+          "wind_speed_entity": "Wind speed"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Enter a station name.",
+      "rain_already_used": "This rain gauge is already used by another station."
+    },
+    "abort": {
+      "already_configured": "This rain gauge is already used by a station.",
+      "reconfigure_successful": "The station sensors were updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rain gauge settings",
+        "data": {
+          "mm_per_tip": "Rain per tip",
+          "debounce_seconds": "Debounce",
+          "rain_window_minutes": "Rain ends after"
+        },
+        "data_description": {
+          "mm_per_tip": "The new value also applies to the totals already recorded.",
+          "debounce_seconds": "Ignores a tip coming less than this delay after the previous one (contact bounce). 0 counts everything.",
+          "rain_window_minutes": "Without any tip for this delay, the rain is considered over."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "rain_today": { "name": "Rain today" },
+      "rain_week": { "name": "Rain this week" },
+      "rain_month": { "name": "Rain this month" },
+      "rain_year": { "name": "Rain this year" },
+      "rain_last_hour": { "name": "Rain last hour" },
+      "rain_last_24h": { "name": "Rain last 24 h" },
+      "rain_rate": { "name": "Rain rate" },
+      "rain_total": { "name": "Total rain" },
+      "last_rain": { "name": "Last rain" }
+    },
+    "binary_sensor": {
+      "raining": { "name": "Raining" }
+    }
+  }
+}
