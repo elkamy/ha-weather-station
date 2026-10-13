@@ -9,6 +9,7 @@ from homeassistant.helpers import entity_registry as er, selector
 from .const import (
     CONF_BATTERY_ENTITY,
     CONF_DEBOUNCE_SECONDS,
+    CONF_FROST_THRESHOLD,
     CONF_HUMIDITY_ENTITY,
     CONF_IMPORT_HISTORY,
     CONF_MM_PER_TIP,
@@ -23,10 +24,13 @@ from .const import (
     CONF_WIND_DIRECTION_ENTITY,
     CONF_WIND_GUST_ENTITY,
     CONF_WIND_SPEED_ENTITY,
+    CONF_WIND_THRESHOLD,
     DEFAULT_DEBOUNCE_SECONDS,
+    DEFAULT_FROST_THRESHOLD,
     DEFAULT_IMPORT_HISTORY,
     DEFAULT_MM_PER_TIP,
     DEFAULT_RAIN_WINDOW,
+    DEFAULT_WIND_THRESHOLD,
     DOMAIN,
 )
 
@@ -204,7 +208,37 @@ class WeatherStationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class WeatherStationOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
-        return self.async_show_menu(step_id="init", menu_options=["settings", "reset"])
+        return self.async_show_menu(step_id="init", menu_options=["settings", "alerts", "reset"])
+
+    async def async_step_alerts(self, user_input=None):
+        """Thresholds of the frost and strong wind alerts."""
+        if user_input is not None:
+            return self.async_create_entry(data={**self.config_entry.options, **user_input})
+
+        options = self.config_entry.options
+        return self.async_show_form(
+            step_id="alerts",
+            data_schema=vol.Schema({
+                vol.Required(
+                    CONF_FROST_THRESHOLD,
+                    default=options.get(CONF_FROST_THRESHOLD, DEFAULT_FROST_THRESHOLD),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-20, max=10, step=0.5, unit_of_measurement="°C",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_WIND_THRESHOLD,
+                    default=options.get(CONF_WIND_THRESHOLD, DEFAULT_WIND_THRESHOLD),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=10, max=200, step=1, unit_of_measurement="km/h",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }),
+        )
 
     async def async_step_reset(self, user_input=None):
         """Start the rain totals again from zero, after a confirmation."""
@@ -243,6 +277,7 @@ class WeatherStationOptionsFlow(config_entries.OptionsFlow):
                 ): MM_PER_TIP_SELECTOR,
                 vol.Required(
                     CONF_DEBOUNCE_SECONDS,
+    CONF_FROST_THRESHOLD,
                     default=options.get(CONF_DEBOUNCE_SECONDS, DEFAULT_DEBOUNCE_SECONDS),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(

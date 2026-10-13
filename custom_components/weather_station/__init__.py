@@ -201,6 +201,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Every entity is registered now: the station lists them all for the cards.
+    async_dispatcher_send(hass, signal_updated(entry.entry_id))
     await _async_register_panel(hass)
     _async_register_services(hass)
     return True

@@ -209,6 +209,12 @@ class StationSensor(RainSensor):
             )
             if entity_id:
                 entities[key] = entity_id
+        for key in ("raining", "frost", "strong_wind"):
+            entity_id = registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, f"{self._entry.entry_id}_{key}"
+            )
+            if entity_id:
+                entities[key] = entity_id
         return entities
 
     @property

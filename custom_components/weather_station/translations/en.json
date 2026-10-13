@@ -65,6 +65,7 @@
         "title": "Station options",
         "menu_options": {
           "settings": "Rain gauge settings",
+          "alerts": "Alert thresholds",
           "reset": "Reset measurements"
         }
       },
@@ -89,6 +90,18 @@
         },
         "data_description": {
           "confirm": "Tick the box and submit to reset everything."
+        }
+      },
+      "alerts": {
+        "title": "Alert thresholds",
+        "description": "The \"Frost risk\" and \"Strong wind\" sensors turn on when these thresholds are crossed. Every alert start and end fires the weather_station_alert event, to send notifications from your automations.",
+        "data": {
+          "frost_threshold": "Frost risk from",
+          "wind_threshold": "Strong wind from"
+        },
+        "data_description": {
+          "frost_threshold": "Air temperature from which ground frost is likely. The alert ends 1 °C above.",
+          "wind_threshold": "Gusts (or mean wind without a gust sensor) starting the alert. It ends below 80 % of the threshold."
         }
       }
     },
@@ -139,6 +152,12 @@
     "binary_sensor": {
       "raining": {
         "name": "Raining"
+      },
+      "frost": {
+        "name": "Frost risk"
+      },
+      "strong_wind": {
+        "name": "Strong wind"
       }
     }
   },

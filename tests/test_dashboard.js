@@ -282,3 +282,15 @@ test("shows wind in m/s with a decimal (WindNerd)", async () => {
   assert.equal(context.wsdDigits("wind_gust", "kn"), 1);
   assert.equal(context.wsdDigits("temperature", "°C"), 1);
 });
+
+test("shows the active alerts in the header", async () => {
+  const alerting = station({ entities: { ...ENTITIES, frost: "binary_sensor.gel", strong_wind: "binary_sensor.vent" } });
+  const states = {
+    s: alerting,
+    "binary_sensor.gel": { entity_id: "binary_sensor.gel", state: "on", attributes: {} },
+    "binary_sensor.vent": { entity_id: "binary_sensor.vent", state: "off", attributes: {} },
+  };
+  const { html } = await renderCard({}, { states });
+  assert.match(html, /class="alert frost"><ha-icon icon="mdi:snowflake-alert"><\/ha-icon>Risque de gel/);
+  assert.doesNotMatch(html, /class="alert strong_wind"/);
+});

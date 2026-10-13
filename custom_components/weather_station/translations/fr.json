@@ -65,6 +65,7 @@
         "title": "Options de la station",
         "menu_options": {
           "settings": "Réglages du pluviomètre",
+          "alerts": "Seuils d'alerte",
           "reset": "Réinitialiser les mesures"
         }
       },
@@ -89,6 +90,18 @@
         },
         "data_description": {
           "confirm": "Cochez la case puis validez pour tout remettre à zéro."
+        }
+      },
+      "alerts": {
+        "title": "Seuils d'alerte",
+        "description": "Les capteurs « Risque de gel » et « Vent fort » s'allument au passage de ces seuils. Chaque début et chaque fin d'alerte déclenche l'événement weather_station_alert, à utiliser dans vos automatisations pour envoyer des notifications.",
+        "data": {
+          "frost_threshold": "Risque de gel à partir de",
+          "wind_threshold": "Vent fort à partir de"
+        },
+        "data_description": {
+          "frost_threshold": "Température de l'air à partir de laquelle il risque de geler au sol. L'alerte cesse 1 °C au-dessus.",
+          "wind_threshold": "Rafales (ou vent moyen sans capteur de rafales) déclenchant l'alerte. Elle cesse sous 80 % du seuil."
         }
       }
     },
@@ -139,6 +152,12 @@
     "binary_sensor": {
       "raining": {
         "name": "Il pleut"
+      },
+      "frost": {
+        "name": "Risque de gel"
+      },
+      "strong_wind": {
+        "name": "Vent fort"
       }
     }
   },

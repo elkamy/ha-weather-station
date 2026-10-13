@@ -38,6 +38,15 @@ DEFAULT_DEBOUNCE_SECONDS = 0.0
 DEFAULT_RAIN_WINDOW = 30
 DEFAULT_IMPORT_HISTORY = True
 
+CONF_FROST_THRESHOLD = "frost_threshold"
+CONF_WIND_THRESHOLD = "wind_threshold"
+# Ground frost is likely from about 2 °C in the air; 50 km/h is Beaufort 7.
+DEFAULT_FROST_THRESHOLD = 2.0
+DEFAULT_WIND_THRESHOLD = 50.0
+
+# Fired when an alert episode starts or ends (frost, strong_wind, rain).
+EVENT_ALERT = f"{DOMAIN}_alert"
+
 UPDATE_INTERVAL_SECONDS = 60
 
 # Sidebar panel showing the dashboard of every station.

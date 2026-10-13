@@ -28,6 +28,10 @@ def _entity(hass: HomeAssistant, entry: MockConfigEntry, key: str) -> str | None
     return er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}")
 
 
+def _binary(hass: HomeAssistant, entry: MockConfigEntry, key: str) -> str | None:
+    return er.async_get(hass).async_get_entity_id("binary_sensor", DOMAIN, f"{entry.entry_id}_{key}")
+
+
 async def test_station_publishes_every_reading(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.temp", "20", {"unit_of_measurement": "°C"})
     hass.states.async_set("sensor.hum", "50", {"unit_of_measurement": "%"})
@@ -51,6 +55,9 @@ async def test_station_publishes_every_reading(hass: HomeAssistant) -> None:
         "rain_total": _entity(hass, entry, "rain_total"),
         "dew_point": _entity(hass, entry, "dew_point"),
         "feels_like": _entity(hass, entry, "feels_like"),
+        "raining": _binary(hass, entry, "raining"),
+        "frost": _binary(hass, entry, "frost"),
+        "strong_wind": _binary(hass, entry, "strong_wind"),
     }
 
     dew_point = hass.states.get(_entity(hass, entry, "dew_point"))

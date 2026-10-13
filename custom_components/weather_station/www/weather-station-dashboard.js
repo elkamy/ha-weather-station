@@ -6,6 +6,7 @@ const WSD_TEXT = {
     name: "Tableau de bord météo",
     description: "Tous les relevés de votre station météo et leurs graphiques sur 24 heures, 7 jours ou 30 jours.",
     panelTitle: "Météo",
+    alerts: { frost: "Risque de gel", strong_wind: "Vent fort" },
     noStation: "Aucune station Weather Station trouvée. Ajoutez l'intégration dans Paramètres › Appareils et services.",
     notFound: (entity) => `Station introuvable : ${entity}`,
     periods: { "24h": "24 h", "7d": "7 jours", "30d": "30 jours" },
@@ -64,6 +65,7 @@ const WSD_TEXT = {
     name: "Weather dashboard",
     description: "All the readings of your weather station and their charts over 24 hours, 7 days or 30 days.",
     panelTitle: "Weather",
+    alerts: { frost: "Frost risk", strong_wind: "Strong wind" },
     noStation: "No Weather Station found. Add the integration in Settings › Devices & services.",
     notFound: (entity) => `Station not found: ${entity}`,
     periods: { "24h": "24 h", "7d": "7 days", "30d": "30 days" },
@@ -666,12 +668,17 @@ class WeatherStationDashboardCard extends HTMLElement {
     const periods = Object.keys(WSD_PERIODS).map((key) => `
       <button type="button" data-period="${key}" aria-pressed="${key === this._period}" class="${key === this._period ? "selected" : ""}">${T.periods[key]}</button>`).join("");
     const battery = wsdFinite(a.battery);
+    const alerts = [["frost", "mdi:snowflake-alert"], ["strong_wind", "mdi:weather-windy-variant"]]
+      .filter(([key]) => this._hass.states?.[a.entities?.[key]]?.state === "on")
+      .map(([key, icon]) => `<span class="alert ${key}"><ha-icon icon="${icon}"></ha-icon>${wsdEscape(T.alerts[key])}</span>`)
+      .join("");
     return `
       <header>
         <div class="title">
           <div class="icon ${raining ? "wet" : ""}"><ha-icon icon="${raining ? "mdi:weather-pouring" : "mdi:weather-partly-cloudy"}"></ha-icon></div>
           <div>
             <h2>${wsdEscape(title)}</h2>
+            ${alerts ? `<div class="alerts">${alerts}</div>` : ""}
             <span class="status ${raining ? "wet" : ""}">${wsdEscape(status)}${battery !== null ? ` · <span class="${battery <= 20 ? "low" : ""}" title="${wsdEscape(T.battery)}"><ha-icon icon="${battery <= 20 ? "mdi:battery-alert" : "mdi:battery"}"></ha-icon>${wsdNumber(battery, language, 0)} %</span>` : ""}</span>
           </div>
         </div>
@@ -1069,6 +1076,10 @@ class WeatherStationDashboardCard extends HTMLElement {
       .status{color:var(--ws-muted);font-size:13px}.status.wet{color:var(--ws-s1);font-weight:500}
       .status ha-icon{--mdc-icon-size:15px;vertical-align:-2px}
       .status .low{color:var(--error-color,#d03b3b)}
+      .alerts{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+      .alert{display:inline-flex;align-items:center;gap:4px;padding:2px 10px 2px 6px;border-radius:999px;font-size:12px;font-weight:600;color:var(--primary-text-color);background:color-mix(in srgb,var(--ws-alert) 18%,var(--card-background-color,#fff));border:1px solid var(--ws-alert)}
+      .alert ha-icon{--mdc-icon-size:16px;color:var(--ws-alert)}
+      .alert.frost{--ws-alert:#2a78d6}.alert.strong_wind{--ws-alert:#fab219}
       .periods{display:inline-flex;padding:3px;border-radius:999px;background:var(--secondary-background-color)}
       .periods button{border:none;background:transparent;color:var(--ws-muted);font:inherit;font-size:13px;padding:6px 14px;border-radius:999px;cursor:pointer}
       .periods button:hover{color:var(--primary-text-color)}

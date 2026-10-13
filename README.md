@@ -39,6 +39,7 @@ Weather Station est une intégration personnalisée Home Assistant pour une stat
 - **Pluie totale** utilisable dans les statistiques longue durée de Home Assistant.
 - **Dernière pluie** et capteur binaire **Il pleut**.
 - **Point de rosée** et **température ressentie** calculés dès que la température et l'humidité sont renseignées. Le ressenti tient compte du vent.
+- **Alertes** gel, vent fort et pluie : des capteurs binaires et un événement `weather_station_alert` à chaque début et fin d'épisode, pour vos notifications.
 - **Calibration** du pluviomètre modifiable à tout moment. Elle s'applique aussi aux cumuls déjà enregistrés.
 - **Anti-rebond** facultatif contre les faux contacts.
 - **Import de l'historique** à la création, pour ne pas repartir de zéro.
@@ -112,6 +113,51 @@ La valeur par défaut, 0,524 mm par basculement, vient d'un pluviomètre Aqara (
 
 La valeur est alors : `mm par basculement = 10 × V / (S × n)`.
 
+## Alertes
+
+La station crée des capteurs d'alerte, à utiliser dans vos automatisations :
+
+| Capteur | S'allume quand… | S'éteint quand… |
+| --- | --- | --- |
+| Il pleut | le pluviomètre bascule | aucun basculement pendant le délai de fin de pluie |
+| Risque de gel | la température passe sous le seuil (2 °C par défaut) | elle remonte 1 °C au-dessus du seuil |
+| Vent fort | les rafales (ou le vent moyen sans capteur de rafales) atteignent le seuil (50 km/h par défaut) | elles redescendent sous 80 % du seuil |
+
+Les seuils se règlent dans les options, menu **Seuils d'alerte**. Le décalage entre le début et la fin évite une rafale d'alertes quand la valeur oscille autour du seuil. Pendant une alerte, le tableau de bord affiche une pastille « Risque de gel » ou « Vent fort ».
+
+À chaque début et chaque fin d'épisode, l'intégration émet l'événement `weather_station_alert`. Un redémarrage de Home Assistant ne rejoue jamais un épisode déjà en cours. Les données de l'événement :
+
+| Donnée | Exemple |
+| --- | --- |
+| `alert` | `frost`, `strong_wind` ou `rain` |
+| `active` | `true` au début, `false` à la fin |
+| `value`, `unit` | `1.5`, `°C` (pour la pluie : cumul du jour en mm) |
+| `threshold` | `2.0` |
+| `station_name`, `config_entry_id`, `entity_id` | la station et le capteur d'alerte |
+
+Exemple : une notification au début de chaque alerte.
+
+```yaml
+alias: Alertes météo
+mode: queued
+triggers:
+  - trigger: event
+    event_type: weather_station_alert
+    event_data:
+      active: true
+actions:
+  - action: notify.mobile_app_votre_telephone
+    data:
+      title: "{{ trigger.event.data.station_name }}"
+      message: >-
+        {% set noms = {'frost': '❄️ Risque de gel', 'strong_wind': '💨 Vent fort', 'rain': '🌧️ Il pleut'} %}
+        {{ noms[trigger.event.data.alert] }}
+        {%- if trigger.event.data.alert != 'rain' %} :
+        {{ trigger.event.data.value }} {{ trigger.event.data.unit }}{% endif %}
+```
+
+Pour les piles des capteurs, l'intégration HACS [Battery Notes](https://github.com/andrew-codechimp/HA-Battery-Notes) surveille tous les appareils de la maison.
+
 ## Tableau de bord
 
 L'entrée **Météo** de la barre latérale montre le tableau de bord, avec un onglet par station. Il existe aussi en carte Lovelace, à ajouter depuis **Ajouter une carte → Tableau de bord météo** ou en YAML :
@@ -160,6 +206,8 @@ show_chart: true                           # pluie heure par heure sur 24 h
 | Dernière pluie | Horodatage du dernier basculement |
 | Il pleut | Allumé tant qu'un basculement a eu lieu dans le délai de fin de pluie |
 | Point de rosée, Température ressentie | °C, avec un capteur de température et un capteur d'humidité |
+| Risque de gel | Avec un capteur de température (voir [Alertes](#alertes)) |
+| Vent fort | Avec un capteur de rafales ou de vent (voir [Alertes](#alertes)) |
 
 ## Désinstallation
 
