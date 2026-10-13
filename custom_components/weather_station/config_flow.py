@@ -226,8 +226,7 @@ class WeatherStationOptionsFlow(config_entries.OptionsFlow):
             step_id="alerts",
             data_schema=vol.Schema({
                 vol.Required(
-                    CONF_FORECAST_ENTITY,
-    CONF_FROST_THRESHOLD,
+                    CONF_FROST_THRESHOLD,
                     default=options.get(CONF_FROST_THRESHOLD, DEFAULT_FROST_THRESHOLD),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
@@ -284,8 +283,6 @@ class WeatherStationOptionsFlow(config_entries.OptionsFlow):
                 ): MM_PER_TIP_SELECTOR,
                 vol.Required(
                     CONF_DEBOUNCE_SECONDS,
-    CONF_FORECAST_ENTITY,
-    CONF_FROST_THRESHOLD,
                     default=options.get(CONF_DEBOUNCE_SECONDS, DEFAULT_DEBOUNCE_SECONDS),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(

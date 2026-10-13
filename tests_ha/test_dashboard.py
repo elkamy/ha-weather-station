@@ -58,6 +58,7 @@ async def test_station_publishes_every_reading(hass: HomeAssistant) -> None:
         "raining": _binary(hass, entry, "raining"),
         "frost": _binary(hass, entry, "frost"),
         "strong_wind": _binary(hass, entry, "strong_wind"),
+        "weather": er.async_get(hass).async_get_entity_id("weather", DOMAIN, f"{entry.entry_id}_weather"),
     }
 
     dew_point = hass.states.get(_entity(hass, entry, "dew_point"))
