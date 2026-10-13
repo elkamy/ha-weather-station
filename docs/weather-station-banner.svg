@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title desc">
+  <title id="title">Weather Station pour Home Assistant</title>
+  <desc id="desc">Bandeau Weather Station : l'emblème de l'intégration et ses fonctions.</desc>
+  <!-- The emblem comes from docs/brand/weather-station-icon.svg: edit it there. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f2a44"/>
+      <stop offset="1" stop-color="#1c5a8a"/>
+    </linearGradient>
+    <linearGradient id="ws-cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d6e6f5"/>
+    </linearGradient>
+    <linearGradient id="ws-drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fdcff"/>
+      <stop offset="1" stop-color="#2e8fd8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="28" fill="url(#bg)"/>
+  <circle cx="1050" cy="155" r="175" fill="#ffffff" opacity=".045"/>
+  <circle cx="1100" cy="280" r="120" fill="#ffffff" opacity=".04"/>
+  <svg x="850" y="22" width="300" height="300" viewBox="0 0 256 256">
+    <circle cx="178" cy="72" r="30" fill="#ffd166"/>
+    <path d="M74 156c-22 0-38-16-38-36s16-36 37-36c7-24 29-40 55-40 30 0 55 22 58 52 18 2 32 17 32 35 0 14-9 25-22 25H74Z" fill="url(#ws-cloud)"/>
+    <g fill="url(#ws-drop)">
+      <path d="M88 178c0 0-14 18-14 28a14 14 0 0 0 28 0c0-10-14-28-14-28Z"/>
+      <path d="M128 172c0 0-16 21-16 32a16 16 0 0 0 32 0c0-11-16-32-16-32Z"/>
+      <path d="M168 178c0 0-14 18-14 28a14 14 0 0 0 28 0c0-10-14-28-14-28Z"/>
+    </g>
+  </svg>
+  <g fill="#e3f1fc" font-family="Inter,Segoe UI,Arial,sans-serif">
+    <text x="72" y="82" font-size="22" font-weight="700" letter-spacing="4" opacity=".85">HOME ASSISTANT · CUSTOM INTEGRATION</text>
+    <text x="68" y="160" font-size="64" font-weight="750" letter-spacing="-1.5">Weather Station</text>
+    <text x="72" y="207" font-size="25" opacity=".92">Votre station météo maison, en un coup d'œil.</text>
+    <text x="72" y="250" font-size="18" opacity=".72">Pluie · Température · Vent · Pression · Graphiques</text>
+  </g>
+  <g transform="translate(72 274)" fill="#8fdcff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600">
+    <circle cx="5" cy="0" r="5"/><text x="20" y="6">Open source</text>
+    <circle cx="160" cy="0" r="5"/><text x="175" y="6">Compatible HACS</text>
+    <circle cx="350" cy="0" r="5"/><text x="365" y="6">Français · English</text>
+  </g>
+</svg>

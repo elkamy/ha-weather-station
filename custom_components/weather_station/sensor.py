@@ -111,15 +111,18 @@ RAIN_SENSORS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
     gauge = entry.runtime_data["rain"]
     entities: list[SensorEntity] = [
-        StationSensor(entry, gauge) if description.key == "rain_today"
-        else RainSensor(entry, gauge, description)
+        RainSensor(entry, gauge, description)
         for description in RAIN_SENSORS
+        if description.key != "rain_today"
     ]
     if has_comfort_sensors(entry):
         entities += [
             ComfortSensor(entry, "dew_point", "mdi:thermometer-water"),
             ComfortSensor(entry, "feels_like", "mdi:thermometer-lines"),
         ]
+    # Added last: its `entities` attribute lists the entity IDs of the others,
+    # which must already be registered.
+    entities.append(StationSensor(entry, gauge))
     async_add_entities(entities)
 
 
