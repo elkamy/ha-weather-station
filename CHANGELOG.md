@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.5.1] — 2026-10-13
 
 ### Corrigé
 - **Reconfigurer** ne déclenche plus d'avertissement « update listener » dans le journal de Home Assistant : la station est rechargée une seule fois, par l'intégration elle-même. Sans cette correction, Reconfigurer aurait cessé de fonctionner avec Home Assistant 2026.12.
