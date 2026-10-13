@@ -56,7 +56,9 @@ async def test_tips_update_the_entities(hass: HomeAssistant) -> None:
     assert hass.states.get(_entity(hass, entry, "raining")).state == "on"
     assert hass.states.get(_entity(hass, entry, "last_rain")).state not in ("unknown", "unavailable")
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    device = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id
+    )
     assert device.name == "Jardin"
 
 
