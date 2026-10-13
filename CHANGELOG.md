@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.6.0] — 2026-10-13
 
 ### Ajouté
 - **Prévisions dans le tableau de bord** : les 5 prochains jours (ciel, températures, pluie et probabilité) d'après l'entité de prévisions de la station, mis à jour automatiquement. L'en-tête donne aussi l'état du ciel.
