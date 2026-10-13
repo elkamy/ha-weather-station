@@ -294,3 +294,74 @@ test("shows the active alerts in the header", async () => {
   assert.match(html, /class="alert frost"><ha-icon icon="mdi:snowflake-alert"><\/ha-icon>Risque de gel/);
   assert.doesNotMatch(html, /class="alert strong_wind"/);
 });
+
+function forecastHass(weatherAttributes = {}) {
+  const subscriptions = [];
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const day = (offset) => new Date(today.getTime() + offset * 24 * HOUR).toISOString();
+  const hass = fakeHass(Date.now(), [], {
+    s: station({ entities: { ...ENTITIES, weather: "weather.jardin" } }),
+    "weather.jardin": {
+      entity_id: "weather.jardin",
+      state: "partlycloudy",
+      attributes: { supported_features: 3, temperature_unit: "°C", precipitation_unit: "mm", forecast_entity: "weather.mf", ...weatherAttributes },
+    },
+    "weather.mf": { entity_id: "weather.mf", state: "partlycloudy", attributes: { friendly_name: "Météo-France Derval" } },
+  });
+  hass.connection = {
+    subscribeMessage: (callback, message) => {
+      subscriptions.push(message);
+      callback({ type: "daily", forecast: [
+        { datetime: day(0), condition: "rainy", temperature: 18.4, templow: 9.6, precipitation: 3.2, precipitation_probability: 80 },
+        { datetime: day(1), condition: "sunny", temperature: 21, templow: 8, precipitation: 0 },
+        { datetime: day(2), condition: "cloudy", temperature: 17, templow: 10, precipitation: 12.4 },
+        ...[3, 4, 5, 6].map((offset) => ({ datetime: day(offset), condition: "fog", temperature: 15, templow: 7 })),
+      ] });
+      return Promise.resolve(() => subscriptions.push("unsubscribed"));
+    },
+  };
+  return { hass, subscriptions };
+}
+
+test("shows the next days of forecast from the station's weather entity", async () => {
+  const { hass, subscriptions } = forecastHass();
+  const card = new Card();
+  card.setConfig({});
+  card.hass = hass;
+  await settle();
+  const html = card.shadowRoot.innerHTML;
+  assert.deepEqual(JSON.parse(JSON.stringify(subscriptions[0])), { type: "weather/subscribe_forecast", entity_id: "weather.jardin", forecast_type: "daily" });
+  assert.match(html, /<h3>Prévisions<\/h3><span class="chart-sub">d&#39;après Météo-France Derval<\/span>/);
+  assert.equal((html.match(/class="day"/g) || []).length, 5);
+  assert.match(html, /Aujourd&#39;hui<\/span>\s*<ha-icon icon="mdi:weather-rainy" title="Pluvieux">/);
+  assert.match(html, /<strong>18 °C<\/strong> <span>10 °C<\/span>/);
+  assert.match(html, /3,2 mm · 80 %/);
+  assert.match(html, /12 mm/);
+  // The sky condition in the header, raining stays first.
+  assert.match(html, /Il pleut/);
+  card.disconnectedCallback();
+  await settle();
+  assert.equal(subscriptions.at(-1), "unsubscribed");
+});
+
+test("names the sky in the header when it is dry", async () => {
+  const { hass } = forecastHass();
+  hass.states.s = station({ raining: false, entities: { ...ENTITIES, weather: "weather.jardin" } });
+  const card = new Card();
+  card.setConfig({});
+  card.hass = hass;
+  await settle();
+  assert.match(card.shadowRoot.innerHTML, /Partiellement nuageux · Pas de pluie/);
+  assert.match(card.shadowRoot.innerHTML, /icon="mdi:weather-partly-cloudy"/);
+});
+
+test("no forecast section without daily forecasts", async () => {
+  const { hass, subscriptions } = forecastHass({ supported_features: 0 });
+  const card = new Card();
+  card.setConfig({});
+  card.hass = hass;
+  await settle();
+  assert.equal(subscriptions.length, 0);
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /<h3>Prévisions/);
+});

@@ -31,6 +31,7 @@ Weather Station est une intégration personnalisée Home Assistant pour une stat
 ## Fonctionnalités
 
 - **Tableau de bord météo** : une entrée **Météo** dans la barre latérale, aussi disponible en carte Lovelace pleine largeur.
+- **Prévisions des 5 prochains jours** (avec une entité de prévisions comme Météo-France) et l'état du ciel dans l'en-tête.
 - **Relevés actuels** : minimum et maximum sur 24 h, tendance de la pression sur 3 h, boussole et force Beaufort, niveau UV.
 - **Graphiques sur 24 h, 7 jours ou 30 jours**, avec une infobulle au survol : pluie, températures, humidité, pression, vent et rafales, rose des vents, UV, luminosité, rayonnement et pluie mois par mois.
 - **Cumuls de pluie** du jour, de la semaine (du lundi), du mois et de l'année, remis à zéro automatiquement et conservés après un redémarrage.
@@ -82,7 +83,7 @@ L'ajout d'une station se fait en deux étapes :
 
 > **Anémomètre WindNerd** : le [WindNerd HQ](https://windnerd.net/docs/windnerd-hq) remonte dans Home Assistant par MQTT (découverte automatique). Choisissez ses moyennes sur 10 minutes : **Wind Speed Avg 10 mn** pour la vitesse, **Wind Gust 10 mn** pour les rafales et **Wind Direction Avg 10 mn** pour la direction. Évitez les valeurs *Live*, publiées toutes les 3 secondes : elles alourdissent l'historique et rendent les graphiques illisibles.
 
-Vous n'avez pas encore tous vos capteurs ? Ajoutez-les plus tard avec **Reconfigurer** depuis la carte de l'intégration. Le tableau de bord n'affiche que les relevés disponibles.
+Vous n'avez pas encore tous vos capteurs ? Ajoutez-les plus tard avec **Reconfigurer** depuis la carte de l'intégration. Le tableau de bord n'affiche que les relevés disponibles. Si vous retirez un capteur, les entités qui en dépendaient (risque de gel, point de rosée…) sont supprimées automatiquement.
 
 Dans les **options** de l'intégration (**Réglages du pluviomètre**), on règle :
 
@@ -189,6 +190,7 @@ period: 24h                                # période à l'ouverture : 24h, 7d o
 - **24 h** : les graphiques reprennent l'historique brut de Home Assistant, et la pluie est affichée heure par heure.
 - **7 et 30 jours** : les graphiques utilisent les **statistiques longue durée** (moyenne horaire ou journalière). Le premier capteur de chaque graphique montre aussi sa plage minimum–maximum. La pluie est affichée jour par jour.
 - **Rose des vents** : part du temps passé dans chaque direction, sur 24 h ou sur les 7 derniers jours.
+- **Prévisions** : avec une entité de prévisions (voir [Entité météo](#entité-météo)), une bande montre les 5 prochains jours (ciel, températures, pluie et probabilité) et l'en-tête donne l'état du ciel.
 
 Un capteur n'a de statistiques longue durée que s'il déclare une `state_class`. C'est le cas de la plupart des capteurs météo et de ceux créés par l'intégration.
 

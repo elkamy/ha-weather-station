@@ -178,3 +178,25 @@ async def test_alert_thresholds_in_the_options(hass: HomeAssistant) -> None:
     assert hass.states.get(_binary(hass, entry, "frost")).state == "on"
     await _set(hass, TEMP, "1.5", "°C")
     assert hass.states.get(_binary(hass, entry, "frost")).state == "off"
+
+
+async def test_removing_a_sensor_removes_its_entities(hass: HomeAssistant) -> None:
+    hass.states.async_set(TEMP, "5", {"unit_of_measurement": "°C"})
+    hass.states.async_set("sensor.hum", "80", {"unit_of_measurement": "%"})
+    entry = await _setup(hass, temperature_entity=TEMP, humidity_entity="sensor.hum")
+    registry = er.async_get(hass)
+    assert _binary(hass, entry, "frost") is not None
+    assert registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_dew_point") is not None
+
+    # Reconfigure without the thermometer: the entry is updated and reloaded.
+    hass.config_entries.async_update_entry(
+        entry, data={key: value for key, value in entry.data.items() if key != "temperature_entity"}
+    )
+    await hass.async_block_till_done()
+
+    assert _binary(hass, entry, "frost") is None
+    for key in ("dew_point", "feels_like"):
+        assert registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_{key}") is None
+    # The others are untouched.
+    assert _binary(hass, entry, "raining") is not None
+    assert registry.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_rain_total") is not None

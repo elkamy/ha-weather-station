@@ -7,6 +7,17 @@ const WSD_TEXT = {
     description: "Tous les relevés de votre station météo et leurs graphiques sur 24 heures, 7 jours ou 30 jours.",
     panelTitle: "Météo",
     alerts: { frost: "Risque de gel", strong_wind: "Vent fort" },
+    forecast: "Prévisions",
+    forecastFrom: (source) => `d'après ${source}`,
+    today: "Aujourd'hui",
+    rainChance: (value) => `${value} %`,
+    forecastLabel: (day, condition, high, low, rain) => `${day} : ${condition}, ${high} / ${low}, pluie ${rain}`,
+    conditions: {
+      "clear-night": "Nuit dégagée", cloudy: "Nuageux", exceptional: "Exceptionnel", fog: "Brouillard",
+      hail: "Grêle", lightning: "Orages", "lightning-rainy": "Orages et pluie", partlycloudy: "Partiellement nuageux",
+      pouring: "Averses", rainy: "Pluvieux", snowy: "Neige", "snowy-rainy": "Neige et pluie", sunny: "Ensoleillé",
+      windy: "Venteux", "windy-variant": "Venteux et nuageux",
+    },
     noStation: "Aucune station Weather Station trouvée. Ajoutez l'intégration dans Paramètres › Appareils et services.",
     notFound: (entity) => `Station introuvable : ${entity}`,
     periods: { "24h": "24 h", "7d": "7 jours", "30d": "30 jours" },
@@ -66,6 +77,17 @@ const WSD_TEXT = {
     description: "All the readings of your weather station and their charts over 24 hours, 7 days or 30 days.",
     panelTitle: "Weather",
     alerts: { frost: "Frost risk", strong_wind: "Strong wind" },
+    forecast: "Forecast",
+    forecastFrom: (source) => `from ${source}`,
+    today: "Today",
+    rainChance: (value) => `${value}%`,
+    forecastLabel: (day, condition, high, low, rain) => `${day}: ${condition}, ${high} / ${low}, rain ${rain}`,
+    conditions: {
+      "clear-night": "Clear night", cloudy: "Cloudy", exceptional: "Exceptional", fog: "Fog",
+      hail: "Hail", lightning: "Lightning", "lightning-rainy": "Lightning, rainy", partlycloudy: "Partly cloudy",
+      pouring: "Pouring", rainy: "Rainy", snowy: "Snowy", "snowy-rainy": "Snowy, rainy", sunny: "Sunny",
+      windy: "Windy", "windy-variant": "Windy, cloudy",
+    },
     noStation: "No Weather Station found. Add the integration in Settings › Devices & services.",
     notFound: (entity) => `Station not found: ${entity}`,
     periods: { "24h": "24 h", "7d": "7 days", "30d": "30 days" },
@@ -148,6 +170,17 @@ const WSD_DIGITS = {
   uv_index: 1, illuminance: 0, solar_radiation: 0, rain: 1,
 };
 const WSD_NUMERIC = Object.keys(WSD_DIGITS).filter((key) => key !== "rain");
+const WSD_FORECAST_DAYS = 5;
+// WeatherEntityFeature.FORECAST_DAILY
+const WSD_FORECAST_DAILY = 1;
+const WSD_CONDITION_ICONS = {
+  "clear-night": "mdi:weather-night", cloudy: "mdi:weather-cloudy", exceptional: "mdi:alert-circle-outline",
+  fog: "mdi:weather-fog", hail: "mdi:weather-hail", lightning: "mdi:weather-lightning",
+  "lightning-rainy": "mdi:weather-lightning-rainy", partlycloudy: "mdi:weather-partly-cloudy",
+  pouring: "mdi:weather-pouring", rainy: "mdi:weather-rainy", snowy: "mdi:weather-snowy",
+  "snowy-rainy": "mdi:weather-snowy-rainy", sunny: "mdi:weather-sunny", windy: "mdi:weather-windy",
+  "windy-variant": "mdi:weather-windy-variant",
+};
 // Wind in m/s or knots needs a decimal (3.6 m/s), not in km/h or mph.
 const WSD_FINE_WIND_UNITS = ["m/s", "kn", "ft/s"];
 
@@ -450,15 +483,47 @@ class WeatherStationDashboardCard extends HTMLElement {
       || tracked.some((state, index) => state !== this._tracked[index]);
     this._tracked = tracked;
     if (station && !this._loading && (!this._data || this._dataStation !== station.entity_id)) this._load();
+    this._subscribeForecast();
     if (changed) this._render();
   }
 
   connectedCallback() {
     this._timer = setInterval(() => this._load(), WSD_REFRESH_MS);
+    this._subscribeForecast();
   }
 
   disconnectedCallback() {
     clearInterval(this._timer);
+    this._unsubscribeForecast();
+  }
+
+  /** The station's weather entity, when it lends daily forecasts. */
+  _forecastEntity() {
+    const id = this._station()?.attributes?.entities?.weather;
+    const features = Number(this._hass?.states?.[id]?.attributes?.supported_features) || 0;
+    return id && (features & WSD_FORECAST_DAILY) ? id : null;
+  }
+
+  _subscribeForecast() {
+    const entity = this._forecastEntity();
+    if (entity === this._forecastSubscribed) return;
+    this._unsubscribeForecast();
+    if (!entity || !this._hass?.connection?.subscribeMessage) return;
+    this._forecastSubscribed = entity;
+    // The same subscription as Home Assistant's forecast card: pushed again
+    // whenever the forecast changes.
+    this._forecastUnsubscribe = Promise.resolve(this._hass.connection.subscribeMessage((message) => {
+      if (this._forecastSubscribed !== entity) return;
+      this._forecast = Array.isArray(message?.forecast) ? message.forecast : null;
+      this._render();
+    }, { type: "weather/subscribe_forecast", entity_id: entity, forecast_type: "daily" })).catch(() => null);
+  }
+
+  _unsubscribeForecast() {
+    this._forecastUnsubscribe?.then((unsubscribe) => typeof unsubscribe === "function" && unsubscribe());
+    this._forecastUnsubscribe = null;
+    this._forecastSubscribed = null;
+    this._forecast = null;
   }
 
   _station() {
@@ -633,6 +698,7 @@ class WeatherStationDashboardCard extends HTMLElement {
     const parts = {
       header: this._header(station, language, T),
       tiles: this._tiles(station, language, T),
+      forecast: this._forecastHtml(station, language, T),
       charts: this._chartsHtml(station, language, T),
     };
     const root = this.shadowRoot.querySelector?.(".dashboard");
@@ -652,6 +718,7 @@ class WeatherStationDashboardCard extends HTMLElement {
           <div class="dashboard${this._hass.themes?.darkMode ? " dark" : ""}${this._loading ? " loading" : ""}">
             <div data-part="header">${parts.header}</div>
             <div data-part="tiles">${parts.tiles}</div>
+            <div data-part="forecast">${parts.forecast}</div>
             <div data-part="charts">${parts.charts}</div>
           </div>
         </ha-card>`;
@@ -663,7 +730,11 @@ class WeatherStationDashboardCard extends HTMLElement {
     const a = station.attributes;
     const raining = a.raining === true;
     const age = a.last_rain ? wsdAge(a.last_rain, T) : null;
-    const status = raining ? T.raining : `${T.dry} · ${age ? T.lastRain(age) : T.noRainYet}`;
+    const sky = this._hass.states?.[a.entities?.weather]?.state;
+    const skyLabel = T.conditions[sky];
+    const status = raining
+      ? T.raining
+      : `${skyLabel ? `${skyLabel} · ` : ""}${T.dry} · ${age ? T.lastRain(age) : T.noRainYet}`;
     const title = this.config.title || a.station_name || T.name;
     const periods = Object.keys(WSD_PERIODS).map((key) => `
       <button type="button" data-period="${key}" aria-pressed="${key === this._period}" class="${key === this._period ? "selected" : ""}">${T.periods[key]}</button>`).join("");
@@ -675,7 +746,7 @@ class WeatherStationDashboardCard extends HTMLElement {
     return `
       <header>
         <div class="title">
-          <div class="icon ${raining ? "wet" : ""}"><ha-icon icon="${raining ? "mdi:weather-pouring" : "mdi:weather-partly-cloudy"}"></ha-icon></div>
+          <div class="icon ${raining ? "wet" : ""}"><ha-icon icon="${raining ? "mdi:weather-pouring" : WSD_CONDITION_ICONS[sky] || "mdi:weather-partly-cloudy"}"></ha-icon></div>
           <div>
             <h2>${wsdEscape(title)}</h2>
             ${alerts ? `<div class="alerts">${alerts}</div>` : ""}
@@ -684,6 +755,39 @@ class WeatherStationDashboardCard extends HTMLElement {
         </div>
         <div class="periods" role="group" aria-label="${wsdEscape(T.periodLabel)}">${periods}</div>
       </header>`;
+  }
+
+  _forecastHtml(station, language, T) {
+    const days = (this._forecast || []).filter((day) => day?.datetime).slice(0, WSD_FORECAST_DAYS);
+    if (!days.length) return "";
+    const weather = this._hass.states?.[station.attributes.entities?.weather];
+    const tempUnit = weather?.attributes?.temperature_unit || "°C";
+    const rainUnit = weather?.attributes?.precipitation_unit || "mm";
+    const sourceId = weather?.attributes?.forecast_entity;
+    const source = this._hass.states?.[sourceId]?.attributes?.friendly_name;
+    const todayKey = new Date().toDateString();
+    const cells = days.map((day) => {
+      const date = new Date(day.datetime);
+      const label = date.toDateString() === todayKey ? T.today : wsdFormatTime(date.getTime(), "tick7d", language);
+      const condition = T.conditions[day.condition] || day.condition || "";
+      const high = wsdWithUnit(day.temperature, tempUnit, language, 0);
+      const low = wsdWithUnit(day.templow, tempUnit, language, 0);
+      const rain = wsdFinite(day.precipitation);
+      const rainText = rain === null ? "—" : `${wsdNumber(rain, language, rain > 0 && rain < 10 ? 1 : 0)} ${rainUnit}`;
+      const chance = wsdFinite(day.precipitation_probability);
+      return `
+        <div class="day" role="listitem" aria-label="${wsdEscape(T.forecastLabel(label, condition, high, low, rainText))}">
+          <span class="day-name">${wsdEscape(label)}</span>
+          <ha-icon icon="${WSD_CONDITION_ICONS[day.condition] || "mdi:weather-cloudy-alert"}" title="${wsdEscape(condition)}"></ha-icon>
+          <span class="day-temp"><strong>${wsdEscape(high)}</strong> <span>${wsdEscape(low)}</span></span>
+          <span class="day-rain"><ha-icon icon="mdi:water"></ha-icon>${wsdEscape(rainText)}${chance !== null ? ` · ${wsdEscape(T.rainChance(wsdNumber(chance, language, 0)))}` : ""}</span>
+        </div>`;
+    }).join("");
+    return `
+      <section class="forecast">
+        <div class="chart-head"><h3>${wsdEscape(T.forecast)}</h3>${source ? `<span class="chart-sub">${wsdEscape(T.forecastFrom(source))}</span>` : ""}</div>
+        <div class="days" role="list">${cells}</div>
+      </section>`;
   }
 
   _recent(key) {
@@ -1098,6 +1202,14 @@ class WeatherStationDashboardCard extends HTMLElement {
       .compass text{font-size:8px;fill:var(--ws-muted);text-anchor:middle}
       .compass .needle{fill:var(--primary-text-color)}
       .compass .from{fill:var(--ws-s1);stroke:var(--card-background-color,#fff);stroke-width:2}
+      .forecast{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:14px;border:1px solid var(--ws-grid)}
+      .days{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+      .day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;text-align:center}
+      .day-name{color:var(--ws-muted);font-size:12px;text-transform:capitalize}
+      .day > ha-icon{--mdc-icon-size:30px;color:var(--primary-text-color)}
+      .day-temp{font-size:14px}.day-temp span{color:var(--ws-muted)}
+      .day-rain{display:inline-flex;align-items:center;gap:2px;color:var(--ws-muted);font-size:12px}
+      .day-rain ha-icon{--mdc-icon-size:13px;color:var(--ws-s1)}
       .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px}
       .chart{display:flex;flex-direction:column;gap:10px;padding:14px 16px 12px;border-radius:14px;border:1px solid var(--ws-grid)}
       .chart-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}

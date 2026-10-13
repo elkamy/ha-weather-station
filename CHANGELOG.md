@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## Non publié
+
+### Ajouté
+- **Prévisions dans le tableau de bord** : les 5 prochains jours (ciel, températures, pluie et probabilité) d'après l'entité de prévisions de la station, mis à jour automatiquement. L'en-tête donne aussi l'état du ciel.
+
+### Corrigé
+- Retirer un capteur avec **Reconfigurer** supprime désormais les entités qui en dépendaient (risque de gel, point de rosée, ressenti, vent fort) au lieu de les laisser « indisponibles ».
+
 ## [0.5.1] — 2026-10-13
 
 ### Corrigé

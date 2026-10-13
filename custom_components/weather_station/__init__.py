@@ -24,6 +24,7 @@ from .const import (
     CONF_IMPORT_HISTORY,
     CONF_MM_PER_TIP,
     CONF_RAIN_ENTITY,
+    CONF_TEMPERATURE_ENTITY,
     DEFAULT_DEBOUNCE_SECONDS,
     DEFAULT_IMPORT_HISTORY,
     DEFAULT_MM_PER_TIP,
@@ -200,12 +201,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_track_time_interval(hass, _tick, timedelta(seconds=UPDATE_INTERVAL_SECONDS))
     )
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    _async_remove_orphan_entities(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Every entity is registered now: the station lists them all for the cards.
     async_dispatcher_send(hass, signal_updated(entry.entry_id))
     await _async_register_panel(hass)
     _async_register_services(hass)
     return True
+
+
+def expected_unique_ids(entry: ConfigEntry) -> set[str]:
+    """Unique IDs of the entities the station provides with its current sensors."""
+    from .binary_sensor import wind_source
+    from .sensor import RAIN_SENSORS, has_comfort_sensors
+
+    keys = {description.key for description in RAIN_SENSORS} | {"raining", "weather"}
+    if has_comfort_sensors(entry):
+        keys |= {"dew_point", "feels_like"}
+    if entry.data.get(CONF_TEMPERATURE_ENTITY):
+        keys.add("frost")
+    if wind_source(entry):
+        keys.add("strong_wind")
+    return {f"{entry.entry_id}_{key}" for key in keys}
+
+
+@callback
+def _async_remove_orphan_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Forget the entities whose sensor was removed (Reconfigure).
+
+    Without this, the frost risk would stay "unavailable" forever once the
+    thermometer is removed.
+    """
+    registry = er.async_get(hass)
+    expected = expected_unique_ids(entry)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.unique_id not in expected:
+            _LOGGER.info("Weather Station: removing %s, its sensor is gone", entity.entity_id)
+            registry.async_remove(entity.entity_id)
 
 
 def rain_statistic_ids(hass: HomeAssistant, entry: ConfigEntry) -> list[str]:
