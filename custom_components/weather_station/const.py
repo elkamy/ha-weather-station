@@ -13,6 +13,8 @@ CONF_UV_ENTITY = "uv_index_entity"
 CONF_ILLUMINANCE_ENTITY = "illuminance_entity"
 CONF_SOLAR_RADIATION_ENTITY = "solar_radiation_entity"
 CONF_IMPORT_HISTORY = "import_history"
+# A weather entity (Météo-France…) lending its forecasts to the station.
+CONF_FORECAST_ENTITY = "forecast_entity"
 
 # Optional sensors shown by the station, in display order: config key and the
 # attribute published on the station sensor.

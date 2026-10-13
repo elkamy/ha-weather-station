@@ -23,7 +23,7 @@ from .const import (
 )
 from .rain import RainGauge
 from .sensor import _reading, rain_window, station_device_info
-from .weather import to_celsius
+from .meteo import to_celsius
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:

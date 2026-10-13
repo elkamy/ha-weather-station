@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## Non publié
+
+### Ajouté
+- **Entité météo** `weather.<station>` pour la carte Prévisions météo et Assist : relevés de la station et état du ciel déduit de ses capteurs (pluie, vent fort, rayonnement ou luminosité).
+- Nouveau champ facultatif **Prévisions** : une entité météo existante (Météo-France, Met.no…) prête ses prévisions quotidiennes et horaires à la station, unités converties, et complète l'état du ciel.
+
 ## [0.4.0] — 2026-10-13
 
 ### Ajouté

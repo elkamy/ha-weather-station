@@ -9,6 +9,7 @@ from homeassistant.helpers import entity_registry as er, selector
 from .const import (
     CONF_BATTERY_ENTITY,
     CONF_DEBOUNCE_SECONDS,
+    CONF_FORECAST_ENTITY,
     CONF_FROST_THRESHOLD,
     CONF_HUMIDITY_ENTITY,
     CONF_IMPORT_HISTORY,
@@ -35,6 +36,7 @@ from .const import (
 )
 
 DEFAULT_STATION_NAME = "Station météo"
+WEATHER_DOMAIN = "weather"
 CONF_CONFIRM = "confirm"
 
 # Optional sensors of the station: config key and the sensor device class.
@@ -51,6 +53,8 @@ SENSOR_FIELDS = (
     (CONF_UV_ENTITY, None),
     (CONF_ILLUMINANCE_ENTITY, None),
     (CONF_SOLAR_RADIATION_ENTITY, None),
+    # Not a sensor: a weather entity lending its forecasts.
+    (CONF_FORECAST_ENTITY, WEATHER_DOMAIN),
 )
 
 
@@ -68,6 +72,8 @@ def suggest_battery_entity(hass: HomeAssistant, rain_entity: str) -> str | None:
 
 
 def _sensor_selector(device_class) -> selector.EntitySelector:
+    if device_class == WEATHER_DOMAIN:
+        return selector.EntitySelector(selector.EntitySelectorConfig(domain=WEATHER_DOMAIN))
     if device_class is None:
         return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
     return selector.EntitySelector(
@@ -220,7 +226,8 @@ class WeatherStationOptionsFlow(config_entries.OptionsFlow):
             step_id="alerts",
             data_schema=vol.Schema({
                 vol.Required(
-                    CONF_FROST_THRESHOLD,
+                    CONF_FORECAST_ENTITY,
+    CONF_FROST_THRESHOLD,
                     default=options.get(CONF_FROST_THRESHOLD, DEFAULT_FROST_THRESHOLD),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
@@ -277,6 +284,7 @@ class WeatherStationOptionsFlow(config_entries.OptionsFlow):
                 ): MM_PER_TIP_SELECTOR,
                 vol.Required(
                     CONF_DEBOUNCE_SECONDS,
+    CONF_FORECAST_ENTITY,
     CONF_FROST_THRESHOLD,
                     default=options.get(CONF_DEBOUNCE_SECONDS, DEFAULT_DEBOUNCE_SECONDS),
                 ): selector.NumberSelector(

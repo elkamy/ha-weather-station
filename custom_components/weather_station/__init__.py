@@ -36,7 +36,7 @@ from .const import (
 from .rain import RainGauge, is_tip, tips_from_history
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["sensor", "binary_sensor"]
+PLATFORMS = ["sensor", "binary_sensor", "weather"]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 RAIN_STORE_KEY = f"{DOMAIN}.rain"

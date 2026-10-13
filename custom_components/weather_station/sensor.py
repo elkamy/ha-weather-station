@@ -36,7 +36,7 @@ from .const import (
     signal_updated,
 )
 from .rain import RainGauge
-from .weather import (
+from .meteo import (
     apparent_temperature,
     dew_point,
     parse_direction,
@@ -209,6 +209,9 @@ class StationSensor(RainSensor):
             )
             if entity_id:
                 entities[key] = entity_id
+        weather = registry.async_get_entity_id("weather", DOMAIN, f"{self._entry.entry_id}_weather")
+        if weather:
+            entities["weather"] = weather
         for key in ("raining", "frost", "strong_wind"):
             entity_id = registry.async_get_entity_id(
                 "binary_sensor", DOMAIN, f"{self._entry.entry_id}_{key}"

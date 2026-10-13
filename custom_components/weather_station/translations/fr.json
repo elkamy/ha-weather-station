@@ -29,7 +29,11 @@
           "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
           "uv_index_entity": "Indice UV",
           "illuminance_entity": "Luminosité",
-          "solar_radiation_entity": "Rayonnement solaire"
+          "solar_radiation_entity": "Rayonnement solaire",
+          "forecast_entity": "Prévisions (entité météo, facultatif)"
+        },
+        "data_description": {
+          "forecast_entity": "Une entité météo existante (Météo-France, Met.no…) qui prête ses prévisions à la station et complète l'état du ciel quand la station ne le mesure pas."
         }
       },
       "reconfigure": {
@@ -46,7 +50,11 @@
           "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
           "uv_index_entity": "Indice UV",
           "illuminance_entity": "Luminosité",
-          "solar_radiation_entity": "Rayonnement solaire"
+          "solar_radiation_entity": "Rayonnement solaire",
+          "forecast_entity": "Prévisions (entité météo, facultatif)"
+        },
+        "data_description": {
+          "forecast_entity": "Une entité météo existante (Météo-France, Met.no…) qui prête ses prévisions à la station et complète l'état du ciel quand la station ne le mesure pas."
         }
       }
     },

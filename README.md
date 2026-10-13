@@ -39,6 +39,7 @@ Weather Station est une intégration personnalisée Home Assistant pour une stat
 - **Pluie totale** utilisable dans les statistiques longue durée de Home Assistant.
 - **Dernière pluie** et capteur binaire **Il pleut**.
 - **Point de rosée** et **température ressentie** calculés dès que la température et l'humidité sont renseignées. Le ressenti tient compte du vent.
+- **Entité météo** (`weather.<station>`) pour les cartes météo de Home Assistant et Assist, avec les prévisions d'un fournisseur au choix (Météo-France, Met.no…).
 - **Alertes** gel, vent fort et pluie : des capteurs binaires et un événement `weather_station_alert` à chaque début et fin d'épisode, pour vos notifications.
 - **Calibration** du pluviomètre modifiable à tout moment. Elle s'applique aussi aux cumuls déjà enregistrés.
 - **Anti-rebond** facultatif contre les faux contacts.
@@ -112,6 +113,18 @@ La valeur par défaut, 0,524 mm par basculement, vient d'un pluviomètre Aqara (
 3. Mesurez la surface de l'entonnoir `S` (en cm²).
 
 La valeur est alors : `mm par basculement = 10 × V / (S × n)`.
+
+## Entité météo
+
+La station crée une entité `weather` à son nom (par exemple `weather.jardin`). Elle s'utilise dans la carte **Prévisions météo** de Home Assistant, dans Assist (« quel temps fait-il ? ») et partout où une entité météo est attendue. Elle donne les relevés de la station : température, ressenti, point de rosée, humidité, pression, vent, rafales, direction et indice UV, ainsi que la pluie du jour en attribut.
+
+**État du ciel** : la station décide d'abord avec ce qu'elle mesure :
+1. le pluviomètre bascule → **pluvieux**, ou **averses** au-delà de 7,6 mm/h ;
+2. l'alerte vent fort est active → **venteux** ;
+3. avec un capteur de rayonnement solaire ou de luminosité, comparé au rayonnement d'un ciel dégagé à la hauteur du soleil → **ensoleillé**, **partiellement nuageux** ou **nuageux** (en journée, soleil à plus de 10° au-dessus de l'horizon) ;
+4. sinon, l'état de l'**entité de prévisions** si vous en avez choisi une. La pluie qu'elle annonce devient « nuageux » si le pluviomètre ne voit rien tomber.
+
+**Prévisions** : choisissez une entité météo existante dans le champ **Prévisions** (à la création ou avec **Reconfigurer**), par exemple celle de l'intégration Météo-France ou Met.no. La station reprend ses prévisions quotidiennes et horaires et convertit leurs unités. Sans entité de prévisions et sans capteur de lumière, l'état du ciel reste inconnu en dehors des épisodes de pluie et de vent fort.
 
 ## Alertes
 
@@ -208,6 +221,7 @@ show_chart: true                           # pluie heure par heure sur 24 h
 | Point de rosée, Température ressentie | °C, avec un capteur de température et un capteur d'humidité |
 | Risque de gel | Avec un capteur de température (voir [Alertes](#alertes)) |
 | Vent fort | Avec un capteur de rafales ou de vent (voir [Alertes](#alertes)) |
+| Entité météo | `weather.<station>` (voir [Entité météo](#entité-météo)) |
 
 ## Désinstallation
 
