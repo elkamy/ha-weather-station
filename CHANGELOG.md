@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.4.0] — 2026-10-13
 
 ### Ajouté
 - **Alertes** : capteurs « Risque de gel » et « Vent fort », avec des seuils réglables dans les options (menu **Seuils d'alerte**) et un décalage entre début et fin pour éviter les alertes en rafale. L'événement `weather_station_alert` est émis au début et à la fin de chaque épisode de gel, de vent fort et de pluie, pour envoyer vos notifications depuis une automatisation. Un redémarrage ne rejoue jamais un épisode en cours.
