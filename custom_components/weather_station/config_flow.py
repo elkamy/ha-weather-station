@@ -189,9 +189,12 @@ class WeatherStationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     if key not in dict(SENSOR_FIELDS)
                 }
                 data.update({CONF_RAIN_ENTITY: rain_entity, **_clean(user_input)})
-                return self.async_update_reload_and_abort(
+                # The entry's update listener reloads it: Home Assistant asks
+                # flows not to schedule a second reload (breaks in 2026.12).
+                self.hass.config_entries.async_update_entry(
                     entry, unique_id=rain_entity, data=data
                 )
+                return self.async_abort(reason="reconfigure_successful")
 
         values = user_input or entry.data
         schema = vol.Schema({

@@ -151,7 +151,7 @@ async def test_config_flow_suggests_the_battery(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_reconfigure_changes_sensors(hass: HomeAssistant) -> None:
+async def test_reconfigure_changes_sensors(hass: HomeAssistant, caplog) -> None:
     hass.states.async_set("sensor.temp", "12")
     entry = await _setup(hass, temperature_entity="sensor.temp")
     hass.states.async_set("binary_sensor.autre", "off")
@@ -164,3 +164,8 @@ async def test_reconfigure_changes_sensors(hass: HomeAssistant) -> None:
     assert entry.data["rain_entity"] == "binary_sensor.autre"
     assert "temperature_entity" not in entry.data
     assert entry.unique_id == "binary_sensor.autre"
+    await hass.async_block_till_done()
+    # Reloaded by the update listener, with the new rain gauge.
+    assert entry.state is config_entries.ConfigEntryState.LOADED
+    assert entry.runtime_data["rain"].total_tips == 0
+    assert "should use it for scheduling a reload" not in caplog.text
