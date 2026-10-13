@@ -1,5 +1,10 @@
 # Journal des modifications
 
+## Non publié
+
+### Corrigé
+- Le vent en m/s ou en nœuds (WindNerd par exemple) s'affiche avec une décimale (« 3,6 m/s » au lieu de « 4 m/s »).
+
 ## [0.3.0] — 2026-10-13
 
 ### Ajouté

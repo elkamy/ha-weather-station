@@ -263,7 +263,9 @@ class WeatherStationCard extends HTMLElement {
           return `<div class="extra" title="${weatherStationEscape(T[key])}"><ha-icon icon="${icon}"></ha-icon><span>${weatherStationCardinal(value, language)}</span></div>`;
         }
         const unit = a[`${key}_unit`] || "";
-        const digits = key === "temperature" || key === "uv_index" ? 1 : 0;
+        // Wind in m/s or knots needs a decimal (3.6 m/s), not in km/h or mph.
+        const fineWind = (key === "wind_speed" || key === "wind_gust") && ["m/s", "kn", "ft/s"].includes(unit);
+        const digits = key === "temperature" || key === "uv_index" || fineWind ? 1 : 0;
         return `<div class="extra" title="${weatherStationEscape(T[key])}"><ha-icon icon="${icon}"></ha-icon><span>${weatherStationNumber(value, language, digits)}${value === null || value === undefined ? "" : weatherStationEscape(unit ? ` ${unit}` : "")}</span></div>`;
       });
     if (a.battery !== null && a.battery !== undefined) {

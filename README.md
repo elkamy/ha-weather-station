@@ -78,6 +78,8 @@ L'ajout d'une station se fait en deux étapes :
    - vitesse, rafales et direction du vent (la direction peut être en degrés ou en points cardinaux : `N`, `NE`, `NO`…) ;
    - indice UV, luminosité et rayonnement solaire.
 
+> **Anémomètre WindNerd** : le [WindNerd HQ](https://windnerd.net/docs/windnerd-hq) remonte dans Home Assistant par MQTT (découverte automatique). Choisissez ses moyennes sur 10 minutes : **Wind Speed Avg 10 mn** pour la vitesse, **Wind Gust 10 mn** pour les rafales et **Wind Direction Avg 10 mn** pour la direction. Évitez les valeurs *Live*, publiées toutes les 3 secondes : elles alourdissent l'historique et rendent les graphiques illisibles.
+
 Vous n'avez pas encore tous vos capteurs ? Ajoutez-les plus tard avec **Reconfigurer** depuis la carte de l'intégration. Le tableau de bord n'affiche que les relevés disponibles.
 
 Dans les **options** de l'intégration (**Réglages du pluviomètre**), on règle :

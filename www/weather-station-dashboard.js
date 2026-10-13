@@ -146,6 +146,13 @@ const WSD_DIGITS = {
   uv_index: 1, illuminance: 0, solar_radiation: 0, rain: 1,
 };
 const WSD_NUMERIC = Object.keys(WSD_DIGITS).filter((key) => key !== "rain");
+// Wind in m/s or knots needs a decimal (3.6 m/s), not in km/h or mph.
+const WSD_FINE_WIND_UNITS = ["m/s", "kn", "ft/s"];
+
+function wsdDigits(key, unit) {
+  if ((key === "wind_speed" || key === "wind_gust") && WSD_FINE_WIND_UNITS.includes(unit)) return 1;
+  return WSD_DIGITS[key] ?? 1;
+}
 
 // ---------------------------------------------------------------- helpers
 
@@ -691,10 +698,10 @@ class WeatherStationDashboardCard extends HTMLElement {
     const a = station.attributes;
     const has = (key) => Object.prototype.hasOwnProperty.call(a, key);
     const unit = (key) => a[`${key}_unit`] || "";
-    const value = (key) => wsdWithUnit(a[key], unit(key), language, WSD_DIGITS[key]);
+    const value = (key) => wsdWithUnit(a[key], unit(key), language, wsdDigits(key, unit(key)));
     const range = (key) => {
       const minMax = wsdMinMax(this._recent(key));
-      return minMax ? T.minMax(wsdWithUnit(minMax.min, unit(key), language, WSD_DIGITS[key]), wsdWithUnit(minMax.max, unit(key), language, WSD_DIGITS[key])) : "";
+      return minMax ? T.minMax(wsdWithUnit(minMax.min, unit(key), language, wsdDigits(key, unit(key))), wsdWithUnit(minMax.max, unit(key), language, wsdDigits(key, unit(key)))) : "";
     };
     const tiles = [];
 
@@ -810,7 +817,7 @@ class WeatherStationDashboardCard extends HTMLElement {
     const scale = wsdScale(Math.min(...values), Math.max(...values), 4, chart.min ?? null, chart.max ?? null);
     const x = (time) => ((time - data.start) / (data.end - data.start)) * WSD_W;
     const y = (value) => WSD_H - ((value - scale.min) / (scale.max - scale.min || 1)) * WSD_H;
-    const digits = WSD_DIGITS[keys[0]];
+    const digits = wsdDigits(keys[0], unit);
     const grid = scale.ticks.map((tick) => `<line class="grid" x1="0" x2="${WSD_W}" y1="${y(tick).toFixed(1)}" y2="${y(tick).toFixed(1)}"></line>`).join("");
     const bands = data.period === "24h" ? "" : series.slice(0, 1).map((serie) => `<path class="band s${serie.slot}" d="${wsdBand(serie.points, x, y)}"></path>`).join("");
     const lines = series.map((serie) => `<path class="line s${serie.slot}" d="${wsdPath(serie.points, x, y)}"></path>`).join("");

@@ -270,3 +270,15 @@ test("escapes the station name", async () => {
 test("takes the full width of a sections dashboard", () => {
   assert.equal(new Card().getGridOptions().columns, "full");
 });
+
+test("shows wind in m/s with a decimal (WindNerd)", async () => {
+  const windy = station({ wind_speed: 3.62, wind_speed_unit: "m/s", wind_gust: 7.15, wind_gust_unit: "m/s" });
+  const { html } = await renderCard({}, { states: { s: windy } });
+  assert.match(html, /<div class="tile-value">3,6 m\/s<\/div>/);
+  assert.match(html, /Rafales 7,2 m\/s/);
+  // 3.62 m/s = 13 km/h: force 3.
+  assert.match(html, /Force 3 · Petite brise/);
+  assert.equal(context.wsdDigits("wind_speed", "km/h"), 0);
+  assert.equal(context.wsdDigits("wind_gust", "kn"), 1);
+  assert.equal(context.wsdDigits("temperature", "°C"), 1);
+});

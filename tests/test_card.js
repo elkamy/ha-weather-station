@@ -155,3 +155,9 @@ test("registers again on a registry that replaced the native one", async () => {
   assert.equal(scoped.get("weather-station-card"), native.get("weather-station-card"));
   assert.equal(scoped.get("weather-station-card-editor"), native.get("weather-station-card-editor"));
 });
+
+test("shows wind in m/s with a decimal", () => {
+  const html = render({ s: station("0", { wind_speed: 3.62, wind_speed_unit: "m/s", wind_gust: 18.4, wind_gust_unit: "km/h" }) });
+  assert.match(html, /3,6 m\/s/);
+  assert.match(html, /18 km\/h/);
+});
