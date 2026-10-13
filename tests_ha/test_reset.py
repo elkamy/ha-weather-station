@@ -43,7 +43,7 @@ async def test_reset_from_the_options_needs_a_confirmation(hass: HomeAssistant) 
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] is FlowResultType.MENU
-    assert result["menu_options"] == ["settings", "reset"]
+    assert result["menu_options"] == ["settings", "alerts", "reset"]
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], {"next_step_id": "reset"}
     )
