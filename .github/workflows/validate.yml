@@ -25,8 +25,14 @@ jobs:
       - name: Check manual-install card syntax
         run: node --check www/weather-station-card.js
 
+      - name: Check dashboard syntax
+        run: node --check custom_components/weather_station/www/weather-station-dashboard.js
+
+      - name: Check manual-install dashboard syntax
+        run: node --check www/weather-station-dashboard.js
+
       - name: Test Lovelace card rendering
-        run: node --test tests/test_card.js
+        run: node --test tests/test_card.js tests/test_dashboard.js
 
       - name: Set up Python
         uses: actions/setup-python@v7

@@ -27,6 +27,9 @@ const WEATHER_STATION_TEXT = {
     humidity: "Humidité",
     pressure: "Pression",
     wind_speed: "Vent",
+    wind_gust: "Rafales",
+    wind_direction: "Direction du vent",
+    uv_index: "Indice UV",
     battery: "Batterie",
     editor: { entity: "Station", title: "Titre (facultatif)", show_chart: "Afficher la pluie heure par heure" },
   },
@@ -58,6 +61,9 @@ const WEATHER_STATION_TEXT = {
     humidity: "Humidity",
     pressure: "Pressure",
     wind_speed: "Wind",
+    wind_gust: "Gusts",
+    wind_direction: "Wind direction",
+    uv_index: "UV index",
     battery: "Battery",
     editor: { entity: "Station", title: "Title (optional)", show_chart: "Show hourly rain" },
   },
@@ -68,7 +74,18 @@ const WEATHER_STATION_EXTRAS = [
   { key: "humidity", icon: "mdi:water-percent" },
   { key: "pressure", icon: "mdi:gauge" },
   { key: "wind_speed", icon: "mdi:weather-windy" },
+  { key: "wind_gust", icon: "mdi:weather-windy-variant" },
+  { key: "wind_direction", icon: "mdi:compass-outline" },
+  { key: "uv_index", icon: "mdi:sun-wireless" },
 ];
+const WEATHER_STATION_CARDINALS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+
+function weatherStationCardinal(degrees, language) {
+  const value = Number(degrees);
+  if (degrees === null || degrees === undefined || !Number.isFinite(value)) return "—";
+  const name = WEATHER_STATION_CARDINALS[Math.round((((value % 360) + 360) % 360) / 22.5) % 16];
+  return language === "fr" ? name.replace(/W/g, "O") : name;
+}
 
 function weatherStationLanguage(hass) {
   const language = String(hass?.locale?.language || hass?.language || "fr").toLowerCase();
@@ -242,8 +259,11 @@ class WeatherStationCard extends HTMLElement {
       .filter(({ key }) => Object.prototype.hasOwnProperty.call(a, key))
       .map(({ key, icon }) => {
         const value = a[key];
+        if (key === "wind_direction") {
+          return `<div class="extra" title="${weatherStationEscape(T[key])}"><ha-icon icon="${icon}"></ha-icon><span>${weatherStationCardinal(value, language)}</span></div>`;
+        }
         const unit = a[`${key}_unit`] || "";
-        const digits = key === "temperature" ? 1 : 0;
+        const digits = key === "temperature" || key === "uv_index" ? 1 : 0;
         return `<div class="extra" title="${weatherStationEscape(T[key])}"><ha-icon icon="${icon}"></ha-icon><span>${weatherStationNumber(value, language, digits)}${value === null || value === undefined ? "" : weatherStationEscape(unit ? ` ${unit}` : "")}</span></div>`;
       });
     if (a.battery !== null && a.battery !== undefined) {

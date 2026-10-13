@@ -16,7 +16,12 @@ from .const import (
     CONF_RAIN_ENTITY,
     CONF_RAIN_WINDOW,
     CONF_STATION_NAME,
+    CONF_ILLUMINANCE_ENTITY,
+    CONF_SOLAR_RADIATION_ENTITY,
     CONF_TEMPERATURE_ENTITY,
+    CONF_UV_ENTITY,
+    CONF_WIND_DIRECTION_ENTITY,
+    CONF_WIND_GUST_ENTITY,
     CONF_WIND_SPEED_ENTITY,
     DEFAULT_DEBOUNCE_SECONDS,
     DEFAULT_IMPORT_HISTORY,
@@ -28,12 +33,19 @@ from .const import (
 DEFAULT_STATION_NAME = "Station météo"
 
 # Optional sensors of the station: config key and the sensor device class.
+# Wind, UV and light sensors often lack a device class (or a direction sensor
+# reports compass points), so any sensor is offered for them.
 SENSOR_FIELDS = (
     (CONF_BATTERY_ENTITY, "battery"),
     (CONF_TEMPERATURE_ENTITY, "temperature"),
     (CONF_HUMIDITY_ENTITY, "humidity"),
     (CONF_PRESSURE_ENTITY, ["pressure", "atmospheric_pressure"]),
-    (CONF_WIND_SPEED_ENTITY, "wind_speed"),
+    (CONF_WIND_SPEED_ENTITY, None),
+    (CONF_WIND_GUST_ENTITY, None),
+    (CONF_WIND_DIRECTION_ENTITY, None),
+    (CONF_UV_ENTITY, None),
+    (CONF_ILLUMINANCE_ENTITY, None),
+    (CONF_SOLAR_RADIATION_ENTITY, None),
 )
 
 
@@ -51,6 +63,8 @@ def suggest_battery_entity(hass: HomeAssistant, rain_entity: str) -> str | None:
 
 
 def _sensor_selector(device_class) -> selector.EntitySelector:
+    if device_class is None:
+        return selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
     return selector.EntitySelector(
         selector.EntitySelectorConfig(domain="sensor", device_class=device_class)
     )

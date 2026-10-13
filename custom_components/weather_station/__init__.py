@@ -5,7 +5,7 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import Event, HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -25,6 +25,8 @@ from .const import (
     DEFAULT_IMPORT_HISTORY,
     DEFAULT_MM_PER_TIP,
     DOMAIN,
+    PANEL_ICON,
+    PANEL_URL_PATH,
     UPDATE_INTERVAL_SECONDS,
     signal_updated,
 )
@@ -36,24 +38,57 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 RAIN_STORE_KEY = f"{DOMAIN}.rain"
 STORE_VERSION = 1
-CARD_FILENAME = "weather-station-card.js"
-CARD_URL = f"/{DOMAIN}/{CARD_FILENAME}"
+CARD_FILES = ("weather-station-card.js", "weather-station-dashboard.js")
 # Bump when changing the card JavaScript to invalidate browser caches.
-CARD_VERSION = "0.1.0"
+CARD_VERSION = "0.2.0"
+DASHBOARD_URL = f"/{DOMAIN}/weather-station-dashboard.js?v={CARD_VERSION}"
+PANEL_TITLES = {"fr": "Météo", "en": "Weather"}
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Serve the Lovelace card and load it in every dashboard."""
+    """Serve the Lovelace cards and load them in every dashboard."""
     from homeassistant.components.frontend import add_extra_js_url
     from homeassistant.components.http import StaticPathConfig
 
-    card = Path(__file__).parent / "www" / CARD_FILENAME
+    www = Path(__file__).parent / "www"
     await hass.http.async_register_static_paths([
-        StaticPathConfig(CARD_URL, str(card), cache_headers=True),
+        StaticPathConfig(f"/{DOMAIN}/{filename}", str(www / filename), cache_headers=True)
+        for filename in CARD_FILES
     ])
-    add_extra_js_url(hass, f"{CARD_URL}?v={CARD_VERSION}")
+    for filename in CARD_FILES:
+        add_extra_js_url(hass, f"/{DOMAIN}/{filename}?v={CARD_VERSION}")
     hass.data.setdefault(DOMAIN, {})
     return True
+
+
+async def _async_register_panel(hass: HomeAssistant) -> None:
+    """Add the weather dashboard to the sidebar, once for every station."""
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    if domain_data.get("_panel") or "frontend" not in hass.config.components:
+        return
+    from homeassistant.components import panel_custom
+
+    language = (hass.config.language or "en").split("-")[0]
+    await panel_custom.async_register_panel(
+        hass,
+        frontend_url_path=PANEL_URL_PATH,
+        webcomponent_name="weather-station-panel",
+        sidebar_title=PANEL_TITLES.get(language, PANEL_TITLES["en"]),
+        sidebar_icon=PANEL_ICON,
+        module_url=DASHBOARD_URL,
+        require_admin=False,
+    )
+    domain_data["_panel"] = True
+
+
+@callback
+def _async_remove_panel(hass: HomeAssistant) -> None:
+    domain_data = hass.data.get(DOMAIN, {})
+    if not domain_data.pop("_panel", False):
+        return
+    from homeassistant.components.frontend import async_remove_panel
+
+    async_remove_panel(hass, PANEL_URL_PATH, warn_if_unknown=False)
 
 
 async def _async_store(hass: HomeAssistant) -> tuple[Store, dict]:
@@ -156,6 +191,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _async_register_panel(hass)
     return True
 
 
@@ -164,7 +200,13 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded and not [
+        other for other in hass.config_entries.async_entries(DOMAIN)
+        if other.entry_id != entry.entry_id and other.state is ConfigEntryState.LOADED
+    ]:
+        _async_remove_panel(hass)
+    return unloaded
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:

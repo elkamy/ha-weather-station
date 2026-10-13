@@ -18,13 +18,18 @@
       },
       "sensors": {
         "title": "Autres capteurs",
-        "description": "Ajoutez si vous le souhaitez les autres capteurs de {station_name}. Ils seront affichés sur la carte de la station. Tous sont facultatifs.",
+        "description": "Ajoutez si vous le souhaitez les autres capteurs de {station_name} : ils alimentent le tableau de bord et ses graphiques. Tous sont facultatifs. Avec la température et l'humidité, le point de rosée et la température ressentie sont calculés.",
         "data": {
           "battery_entity": "Batterie du pluviomètre",
           "temperature_entity": "Température",
           "humidity_entity": "Humidité",
           "pressure_entity": "Pression atmosphérique",
-          "wind_speed_entity": "Vitesse du vent"
+          "wind_speed_entity": "Vitesse du vent",
+          "wind_gust_entity": "Rafales de vent",
+          "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
+          "uv_index_entity": "Indice UV",
+          "illuminance_entity": "Luminosité",
+          "solar_radiation_entity": "Rayonnement solaire"
         }
       },
       "reconfigure": {
@@ -36,7 +41,12 @@
           "temperature_entity": "Température",
           "humidity_entity": "Humidité",
           "pressure_entity": "Pression atmosphérique",
-          "wind_speed_entity": "Vitesse du vent"
+          "wind_speed_entity": "Vitesse du vent",
+          "wind_gust_entity": "Rafales de vent",
+          "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
+          "uv_index_entity": "Indice UV",
+          "illuminance_entity": "Luminosité",
+          "solar_radiation_entity": "Rayonnement solaire"
         }
       }
     },
@@ -68,18 +78,44 @@
   },
   "entity": {
     "sensor": {
-      "rain_today": { "name": "Pluie aujourd'hui" },
-      "rain_week": { "name": "Pluie cette semaine" },
-      "rain_month": { "name": "Pluie ce mois-ci" },
-      "rain_year": { "name": "Pluie cette année" },
-      "rain_last_hour": { "name": "Pluie dernière heure" },
-      "rain_last_24h": { "name": "Pluie dernières 24 h" },
-      "rain_rate": { "name": "Intensité de pluie" },
-      "rain_total": { "name": "Pluie totale" },
-      "last_rain": { "name": "Dernière pluie" }
+      "rain_today": {
+        "name": "Pluie aujourd'hui"
+      },
+      "rain_week": {
+        "name": "Pluie cette semaine"
+      },
+      "rain_month": {
+        "name": "Pluie ce mois-ci"
+      },
+      "rain_year": {
+        "name": "Pluie cette année"
+      },
+      "rain_last_hour": {
+        "name": "Pluie dernière heure"
+      },
+      "rain_last_24h": {
+        "name": "Pluie dernières 24 h"
+      },
+      "rain_rate": {
+        "name": "Intensité de pluie"
+      },
+      "rain_total": {
+        "name": "Pluie totale"
+      },
+      "last_rain": {
+        "name": "Dernière pluie"
+      },
+      "dew_point": {
+        "name": "Point de rosée"
+      },
+      "feels_like": {
+        "name": "Température ressentie"
+      }
     },
     "binary_sensor": {
-      "raining": { "name": "Il pleut" }
+      "raining": {
+        "name": "Il pleut"
+      }
     }
   }
 }

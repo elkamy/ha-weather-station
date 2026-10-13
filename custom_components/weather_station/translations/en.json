@@ -18,13 +18,18 @@
       },
       "sensors": {
         "title": "Other sensors",
-        "description": "Optionally add the other sensors of {station_name}. They are shown on the station card. All are optional.",
+        "description": "Optionally add the other sensors of {station_name}: they feed the dashboard and its charts. All are optional. With temperature and humidity, the dew point and the feels-like temperature are computed.",
         "data": {
           "battery_entity": "Rain gauge battery",
           "temperature_entity": "Temperature",
           "humidity_entity": "Humidity",
           "pressure_entity": "Atmospheric pressure",
-          "wind_speed_entity": "Wind speed"
+          "wind_speed_entity": "Wind speed",
+          "wind_gust_entity": "Wind gust",
+          "wind_direction_entity": "Wind direction (degrees or N, NE…)",
+          "uv_index_entity": "UV index",
+          "illuminance_entity": "Illuminance",
+          "solar_radiation_entity": "Solar radiation"
         }
       },
       "reconfigure": {
@@ -36,7 +41,12 @@
           "temperature_entity": "Temperature",
           "humidity_entity": "Humidity",
           "pressure_entity": "Atmospheric pressure",
-          "wind_speed_entity": "Wind speed"
+          "wind_speed_entity": "Wind speed",
+          "wind_gust_entity": "Wind gust",
+          "wind_direction_entity": "Wind direction (degrees or N, NE…)",
+          "uv_index_entity": "UV index",
+          "illuminance_entity": "Illuminance",
+          "solar_radiation_entity": "Solar radiation"
         }
       }
     },
@@ -68,18 +78,44 @@
   },
   "entity": {
     "sensor": {
-      "rain_today": { "name": "Rain today" },
-      "rain_week": { "name": "Rain this week" },
-      "rain_month": { "name": "Rain this month" },
-      "rain_year": { "name": "Rain this year" },
-      "rain_last_hour": { "name": "Rain last hour" },
-      "rain_last_24h": { "name": "Rain last 24 h" },
-      "rain_rate": { "name": "Rain rate" },
-      "rain_total": { "name": "Total rain" },
-      "last_rain": { "name": "Last rain" }
+      "rain_today": {
+        "name": "Rain today"
+      },
+      "rain_week": {
+        "name": "Rain this week"
+      },
+      "rain_month": {
+        "name": "Rain this month"
+      },
+      "rain_year": {
+        "name": "Rain this year"
+      },
+      "rain_last_hour": {
+        "name": "Rain last hour"
+      },
+      "rain_last_24h": {
+        "name": "Rain last 24 h"
+      },
+      "rain_rate": {
+        "name": "Rain rate"
+      },
+      "rain_total": {
+        "name": "Total rain"
+      },
+      "last_rain": {
+        "name": "Last rain"
+      },
+      "dew_point": {
+        "name": "Dew point"
+      },
+      "feels_like": {
+        "name": "Feels like"
+      }
     },
     "binary_sensor": {
-      "raining": { "name": "Raining" }
+      "raining": {
+        "name": "Raining"
+      }
     }
   }
 }

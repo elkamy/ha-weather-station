@@ -10,11 +10,12 @@
   "config_flow": true,
   "dependencies": [
     "frontend",
-    "http"
+    "http",
+    "panel_custom"
   ],
   "documentation": "https://github.com/elkamy/ha-weather-station",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/elkamy/ha-weather-station/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
