@@ -365,3 +365,53 @@ test("no forecast section without daily forecasts", async () => {
   assert.equal(subscriptions.length, 0);
   assert.doesNotMatch(card.shadowRoot.innerHTML, /<h3>Prévisions/);
 });
+
+test("the card version matches the integration version", () => {
+  const manifest = JSON.parse(fs.readFileSync("custom_components/weather_station/manifest.json", "utf8"));
+  assert.equal(registry.get("weather-station-dashboard-card").WS_VERSION, manifest.version);
+  const init = fs.readFileSync("custom_components/weather_station/__init__.py", "utf8");
+  assert.match(init, new RegExp(`CARD_VERSION = "${manifest.version.replace(/\./g, "\.")}"`));
+});
+
+test("an older cached card already registered shows a reload banner", () => {
+  // The browser cache loaded an older copy first: its class owns the tag.
+  class OldCard extends FakeHTMLElement {
+    _render() { this.shadowRoot.innerHTML = "<ha-card>ancienne carte</ha-card>"; }
+  }
+  const tags = new Map([["weather-station-dashboard-card", OldCard]]);
+  const sandbox = {
+    HTMLElement: FakeHTMLElement,
+    customElements: { define: (name, component) => tags.set(name, component), get: (name) => tags.get(name) },
+    window: { customCards: [] },
+  };
+  vm.runInNewContext(fs.readFileSync("custom_components/weather_station/www/weather-station-dashboard.js", "utf8"), sandbox);
+  assert.equal(tags.get("weather-station-dashboard-card"), OldCard);
+  const old = new OldCard();
+  old.attachShadow();
+  old._render();
+  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.6\.1\) est installée/);
+  assert.match(old.shadowRoot.innerHTML, /ancienne carte/);
+  // Rendered again: still one banner.
+  old._render();
+  assert.equal((old.shadowRoot.innerHTML.match(/ws-outdated/g) || []).length, 1);
+});
+
+test("the same or a newer registered card gets no banner", () => {
+  class Newer extends FakeHTMLElement {
+    static WS_VERSION = "9.0.0";
+    _render() { this.shadowRoot.innerHTML = "<ha-card>future</ha-card>"; }
+  }
+  const tags = new Map([["weather-station-dashboard-card", Newer]]);
+  vm.runInNewContext(fs.readFileSync("custom_components/weather_station/www/weather-station-dashboard.js", "utf8"), {
+    HTMLElement: FakeHTMLElement,
+    customElements: { define: (name, component) => tags.set(name, component), get: (name) => tags.get(name) },
+    window: { customCards: [] },
+  });
+  const card = new Newer();
+  card.attachShadow();
+  card._render();
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /ws-outdated/);
+  assert.equal(context.wsdIsOlder("0.6.0", "0.6.1"), true);
+  assert.equal(context.wsdIsOlder(undefined, "0.6.1"), true);
+  assert.equal(context.wsdIsOlder("0.10.0", "0.9.9"), false);
+});

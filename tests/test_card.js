@@ -161,3 +161,21 @@ test("shows wind in m/s with a decimal", () => {
   assert.match(html, /3,6 m\/s/);
   assert.match(html, /18 km\/h/);
 });
+
+test("an older cached compact card shows a reload banner", () => {
+  class OldCard extends FakeHTMLElement {
+    render() { this.shadowRoot.innerHTML = "<ha-card>ancienne</ha-card>"; }
+  }
+  const tags = new Map([["weather-station-card", OldCard]]);
+  vm.runInNewContext(fs.readFileSync("custom_components/weather_station/www/weather-station-card.js", "utf8"), {
+    HTMLElement: FakeHTMLElement,
+    customElements: { define: (name, component) => tags.set(name, component), get: (name) => tags.get(name) },
+    window: { customCards: [] },
+  });
+  const old = new OldCard();
+  old.attachShadow();
+  old.render();
+  assert.match(old.shadowRoot.innerHTML, /ws-outdated[^]*Weather Station \(0\.6\.1\)/);
+  const manifest = JSON.parse(fs.readFileSync("custom_components/weather_station/manifest.json", "utf8"));
+  assert.equal(registry.get("weather-station-card").WS_VERSION, manifest.version);
+});

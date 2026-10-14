@@ -126,10 +126,67 @@ function weatherStationAge(iso, T, now = Date.now()) {
 // Home Assistant's frontend replaces window.customElements with a scoped
 // registry while it starts: a card loaded from the cache may register on the
 // native one first, so register again once the frontend and Lovelace exist.
-function weatherStationDefine(tag, component) {
+// Version of this file, kept equal to the integration's manifest version.
+const WEATHER_STATION_VERSION = "0.6.1";
+const WEATHER_STATION_OUTDATED_TEXT = {
+  fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
+  en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
+};
+
+function weatherStationIsOlder(version, than) {
+  const parts = (value) => String(value || "0").split(".").map((part) => parseInt(part, 10) || 0);
+  const a = parts(version);
+  const b = parts(than);
+  for (let index = 0; index < 3; index += 1) {
+    if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) < (b[index] || 0);
+  }
+  return false;
+}
+
+function weatherStationOutdatedBanner(element) {
+  const root = element?.shadowRoot;
+  if (!root || String(root.innerHTML).includes("ws-outdated")) return;
+  const text = WEATHER_STATION_OUTDATED_TEXT[weatherStationPageLanguage()](WEATHER_STATION_VERSION);
+  const style = "display:block;margin:0 0 8px;padding:10px 12px;border-radius:10px;background:#fab219;color:#1a1a19;font-size:13px;line-height:1.4";
+  if (typeof document !== "undefined" && typeof root.prepend === "function") {
+    const banner = document.createElement("div");
+    banner.className = "ws-outdated";
+    banner.setAttribute("role", "alert");
+    banner.style.cssText = style;
+    banner.textContent = text;
+    root.prepend(banner);
+  } else {
+    root.innerHTML = `<div class="ws-outdated" role="alert" style="${style}">${weatherStationEscape(text)}</div>${root.innerHTML}`;
+  }
+}
+
+/**
+ * A browser cache can load an older copy of this file first: the older class
+ * keeps the tag (custom elements cannot be redefined), so its cards would
+ * silently miss the new features. This newer file then makes them show a
+ * reload banner after each render.
+ */
+function weatherStationFlagOutdated(existing, renderMethod) {
+  const proto = existing?.prototype;
+  if (!proto || typeof proto[renderMethod] !== "function" || proto.__wsOutdatedFlagged) return;
+  const original = proto[renderMethod];
+  proto[renderMethod] = function renderWithOutdatedBanner(...args) {
+    const result = original.apply(this, args);
+    weatherStationOutdatedBanner(this);
+    return result;
+  };
+  proto.__wsOutdatedFlagged = true;
+}
+
+function weatherStationDefine(tag, component, renderMethod = null) {
+  component.WS_VERSION = WEATHER_STATION_VERSION;
   const define = () => {
     const registry = globalThis.customElements;
-    if (!registry.get(tag)) registry.define(tag, component);
+    const existing = registry.get(tag);
+    if (!existing) registry.define(tag, component);
+    else if (renderMethod && existing !== component && weatherStationIsOlder(existing.WS_VERSION, WEATHER_STATION_VERSION)) {
+      weatherStationFlagOutdated(existing, renderMethod);
+    }
   };
   define();
   for (const ready of ["home-assistant", "ha-panel-lovelace"]) {
@@ -329,7 +386,7 @@ class WeatherStationCard extends HTMLElement {
   }
 }
 
-weatherStationDefine("weather-station-card", WeatherStationCard);
+weatherStationDefine("weather-station-card", WeatherStationCard, "render");
 
 class WeatherStationCardEditor extends HTMLElement {
   setConfig(config) {
