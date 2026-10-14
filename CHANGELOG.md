@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## Non publié
+## [0.6.1] — 2026-10-14
 
 ### Ajouté
 - Quand le navigateur garde en cache une ancienne version des cartes après une mise à jour, elles affichent un bandeau « Une nouvelle version de Weather Station est installée : rechargez la page », au lieu de rester silencieusement sur l'ancienne version (par exemple sans la bande de prévisions).
