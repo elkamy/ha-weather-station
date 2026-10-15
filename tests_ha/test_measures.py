@@ -54,7 +54,7 @@ async def test_measures_in_fixed_units_with_statistics(hass: HomeAssistant) -> N
     temperature = hass.states.get(_measure(hass, entry, "temperature"))
     assert temperature.attributes["unit_of_measurement"] == "°F"
     assert float(temperature.state) == 50.0
-    assert hass.states.get(_measure(hass, entry, "humidity")).state == "60"
+    assert float(hass.states.get(_measure(hass, entry, "humidity")).state) == 60
     assert float(hass.states.get(_measure(hass, entry, "wind_direction")).state) == 225
 
     station = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_rain_today")
