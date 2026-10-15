@@ -155,6 +155,33 @@
       },
       "feels_like": {
         "name": "Feels like"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "humidity": {
+        "name": "Humidity"
+      },
+      "pressure": {
+        "name": "Pressure"
+      },
+      "wind_speed": {
+        "name": "Wind speed"
+      },
+      "wind_gust": {
+        "name": "Wind gust"
+      },
+      "wind_direction": {
+        "name": "Wind direction"
+      },
+      "uv_index": {
+        "name": "UV index"
+      },
+      "illuminance": {
+        "name": "Illuminance"
+      },
+      "solar_radiation": {
+        "name": "Solar radiation"
       }
     },
     "binary_sensor": {

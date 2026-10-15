@@ -1,5 +1,11 @@
 # Journal des modifications
 
+## [0.7.0] — 2026-10-15
+
+### Ajouté
+- **Relevés de la station** : pour chaque capteur choisi (température, humidité, pression, vent, rafales, direction, UV, luminosité, rayonnement), la station crée sa propre entité, déclarée comme mesure dans une unité fixe et affichée dans l'unité du capteur d'origine. Home Assistant en garde les statistiques longue durée même quand le capteur d'origine n'en déclare pas (par exemple l'anémomètre WindNerd) : les graphiques 7 et 30 jours fonctionnent sans personnalisation YAML, et leur historique continue si vous remplacez un capteur.
+- Le tableau de bord complète les statistiques du capteur d'origine par celles de la station : l'historique déjà enregistré est conservé.
+
 ## [0.6.1] — 2026-10-14
 
 ### Ajouté

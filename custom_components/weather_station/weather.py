@@ -51,7 +51,14 @@ from .const import (
 )
 from .meteo import LUX_PER_WATT, parse_direction, sky_condition, station_condition
 from .rain import RainGauge
-from .sensor import _reading, comfort_value, has_comfort_sensors, rain_window, station_device_info
+from .sensor import (
+    _reading,
+    comfort_value,
+    convert_reading as _convert,
+    has_comfort_sensors,
+    rain_window,
+    station_device_info,
+)
 
 _LOGGER = logging.getLogger(__name__)
 SUN = "sun.sun"
@@ -75,17 +82,6 @@ FORECAST_UNITS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
     async_add_entities([StationWeather(entry, entry.runtime_data["rain"])])
-
-
-def _convert(converter, value, unit: str | None, target: str) -> float | None:
-    """A reading in the target unit; None when the unit is unknown."""
-    if value is None:
-        return None
-    if unit in (None, "", target):
-        return value
-    if unit not in converter.VALID_UNITS:
-        return None
-    return converter.convert(value, unit, target)
 
 
 def convert_forecast(forecast: list[dict] | None, source_attributes: dict) -> list[Forecast] | None:

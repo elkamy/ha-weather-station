@@ -29,6 +29,7 @@ from .const import (
     DEFAULT_IMPORT_HISTORY,
     DEFAULT_MM_PER_TIP,
     DOMAIN,
+    EXTRA_SENSORS,
     PANEL_ICON,
     PANEL_URL_PATH,
     UPDATE_INTERVAL_SECONDS,
@@ -46,7 +47,7 @@ ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 STORE_VERSION = 1
 CARD_FILES = ("weather-station-card.js", "weather-station-dashboard.js")
 # Bump when changing the card JavaScript to invalidate browser caches.
-CARD_VERSION = "0.6.1"
+CARD_VERSION = "0.7.0"
 DASHBOARD_URL = f"/{DOMAIN}/weather-station-dashboard.js?v={CARD_VERSION}"
 PANEL_TITLES = {"fr": "Météo", "en": "Weather"}
 
@@ -222,6 +223,8 @@ def expected_unique_ids(entry: ConfigEntry) -> set[str]:
         keys.add("frost")
     if wind_source(entry):
         keys.add("strong_wind")
+    # The station's own copy of each configured reading.
+    keys |= {attribute for key, attribute in EXTRA_SENSORS if entry.data.get(key)}
     return {f"{entry.entry_id}_{key}" for key in keys}
 
 

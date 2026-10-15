@@ -11,7 +11,14 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    DEGREE,
+    LIGHT_LUX,
+    PERCENTAGE,
+    UV_INDEX,
+    UnitOfIrradiance,
     UnitOfPrecipitationDepth,
+    UnitOfPressure,
+    UnitOfSpeed,
     UnitOfTemperature,
     UnitOfVolumetricFlux,
 )
@@ -21,6 +28,11 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import (
+    PressureConverter,
+    SpeedConverter,
+    TemperatureConverter,
+)
 
 from .const import (
     CONF_BATTERY_ENTITY,
@@ -108,6 +120,61 @@ RAIN_SENSORS = (
 )
 
 
+@dataclass(frozen=True)
+class MeasureDescription:
+    """A station reading copied from its source sensor, in a fixed unit."""
+
+    device_class: SensorDeviceClass | None
+    unit: str | None
+    converter: type | None = None
+    precision: int = 0
+    state_class: SensorStateClass | None = SensorStateClass.MEASUREMENT
+
+
+# Circular mean for wind directions (Home Assistant 2025.2+); without it a
+# plain mean of 350° and 10° would be 180°, so no statistics at all.
+_ANGLE = getattr(SensorStateClass, "MEASUREMENT_ANGLE", None)
+
+# Station readings by attribute (EXTRA_SENSORS). Fixed native units keep the
+# long-term statistics consistent even when the source sensor changes.
+MEASURES = {
+    "temperature": MeasureDescription(
+        SensorDeviceClass.TEMPERATURE, UnitOfTemperature.CELSIUS, TemperatureConverter, 1
+    ),
+    "humidity": MeasureDescription(SensorDeviceClass.HUMIDITY, PERCENTAGE),
+    "pressure": MeasureDescription(
+        SensorDeviceClass.ATMOSPHERIC_PRESSURE, UnitOfPressure.HPA, PressureConverter, 1
+    ),
+    "wind_speed": MeasureDescription(
+        SensorDeviceClass.WIND_SPEED, UnitOfSpeed.KILOMETERS_PER_HOUR, SpeedConverter, 1
+    ),
+    "wind_gust": MeasureDescription(
+        SensorDeviceClass.WIND_SPEED, UnitOfSpeed.KILOMETERS_PER_HOUR, SpeedConverter, 1
+    ),
+    "wind_direction": MeasureDescription(
+        SensorDeviceClass.WIND_DIRECTION if hasattr(SensorDeviceClass, "WIND_DIRECTION") else None,
+        DEGREE,
+        state_class=_ANGLE,
+    ),
+    "uv_index": MeasureDescription(None, UV_INDEX, precision=1),
+    "illuminance": MeasureDescription(SensorDeviceClass.ILLUMINANCE, LIGHT_LUX),
+    "solar_radiation": MeasureDescription(
+        SensorDeviceClass.IRRADIANCE, UnitOfIrradiance.WATTS_PER_SQUARE_METER
+    ),
+}
+
+
+def convert_reading(converter, value: float | None, unit: str | None, target: str) -> float | None:
+    """A reading in the target unit; None when its unit cannot be converted."""
+    if value is None:
+        return None
+    if unit in (None, "", target):
+        return value
+    if converter is None or unit not in converter.VALID_UNITS:
+        return None
+    return converter.convert(value, unit, target)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
     gauge = entry.runtime_data["rain"]
     entities: list[SensorEntity] = [
@@ -120,6 +187,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             ComfortSensor(entry, "dew_point", "mdi:thermometer-water"),
             ComfortSensor(entry, "feels_like", "mdi:thermometer-lines"),
         ]
+    entities += [
+        MeasureSensor(hass, entry, key, attribute)
+        for key, attribute in EXTRA_SENSORS
+        if entry.data.get(key)
+    ]
     # Added last: its `entities` attribute lists the entity IDs of the others,
     # which must already be registered.
     entities.append(StationSensor(entry, gauge))
@@ -184,7 +256,7 @@ class StationSensor(RainSensor):
     _unrecorded_attributes = frozenset({
         "hourly_rain", "rain_week", "rain_month", "rain_year", "rain_last_hour",
         "rain_last_24h", "rain_rate", "rain_total", "last_rain", "raining", "battery",
-        "entities", "dew_point", "dew_point_unit", "feels_like", "feels_like_unit",
+        "entities", "measures", "dew_point", "dew_point_unit", "feels_like", "feels_like_unit",
         *(attribute for _key, attribute in EXTRA_SENSORS),
         *(f"{attribute}_unit" for _key, attribute in EXTRA_SENSORS),
     })
@@ -220,6 +292,18 @@ class StationSensor(RainSensor):
                 entities[key] = entity_id
         return entities
 
+    def _measures(self) -> dict[str, str]:
+        """The station's own copy of each reading, which keeps long-term statistics."""
+        registry = er.async_get(self.hass)
+        return {
+            attribute: entity_id
+            for key, attribute in EXTRA_SENSORS
+            if self._entry.data.get(key)
+            and (entity_id := registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{self._entry.entry_id}_{attribute}"
+            ))
+        }
+
     @property
     def extra_state_attributes(self) -> dict:
         now = dt_util.now()
@@ -243,6 +327,7 @@ class StationSensor(RainSensor):
             "mm_per_tip": gauge.mm_per_tip,
             "battery": _reading(self.hass, data.get(CONF_BATTERY_ENTITY))[0],
             "entities": self._entities(),
+            "measures": self._measures(),
         }
         for key, attribute in EXTRA_SENSORS:
             if not data.get(key):
@@ -318,3 +403,54 @@ class ComfortSensor(SensorEntity):
             self.async_write_ha_state()
 
         self.async_on_remove(async_track_state_change_event(self.hass, sources, _changed))
+
+
+class MeasureSensor(SensorEntity):
+    """The station's copy of one of its readings.
+
+    Whatever the source sensor declares, this one is a measurement in a fixed
+    unit, so Home Assistant keeps its long-term statistics (7 / 30 days
+    charts), and they continue when the source sensor is replaced.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, key: str, attribute: str) -> None:
+        self._entry = entry
+        self._source = entry.data[key]
+        self._attribute = attribute
+        self._description = description = MEASURES[attribute]
+        self._attr_unique_id = f"{entry.entry_id}_{attribute}"
+        self._attr_translation_key = attribute
+        self._attr_device_info = station_device_info(entry)
+        self._attr_device_class = description.device_class
+        self._attr_state_class = description.state_class
+        self._attr_native_unit_of_measurement = description.unit
+        self._attr_suggested_display_precision = description.precision
+        # Shown in the source's unit (m/s for an anemometer set so), applied
+        # when the entity is first registered.
+        _value, unit = _reading(hass, self._source)
+        converter = description.converter
+        if converter and unit and unit != description.unit and unit in converter.VALID_UNITS:
+            self._attr_suggested_unit_of_measurement = unit
+
+    @property
+    def native_value(self) -> float | None:
+        description = self._description
+        if self._attribute == "wind_direction":
+            state = self.hass.states.get(self._source)
+            return parse_direction(state.state) if state else None
+        value, unit = _reading(self.hass, self._source)
+        if description.converter is None:
+            # Same quantity whatever the unit label ("UV index", "lx", "%"...).
+            return value
+        result = convert_reading(description.converter, value, unit, description.unit)
+        return None if result is None else round(result, 2)
+
+    async def async_added_to_hass(self) -> None:
+        @callback
+        def _changed(_event: Event) -> None:
+            self.async_write_ha_state()
+
+        self.async_on_remove(async_track_state_change_event(self.hass, [self._source], _changed))

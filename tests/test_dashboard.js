@@ -234,6 +234,22 @@ test("uses statistics for 7 and 30 days, with today's rain from the station", as
   assert.match(html, /aria-pressed="true" class="selected">30 jours/);
 });
 
+test("completes the source statistics with the station's own copy", async () => {
+  const merged = context.wsdMergePoints(
+    [{ t: 2, v: 20 }, { t: 3, v: 30 }],
+    [{ t: 1, v: 11 }, { t: 2, v: 99 }, { t: 4, v: 44 }],
+  );
+  // The source wins where both have a point; the copy fills the gaps.
+  assert.equal(JSON.stringify(merged.map((point) => [point.t, point.v])), "[[1,11],[2,20],[3,30],[4,44]]");
+
+  const withMeasures = station({ measures: { wind_speed: "sensor.jardin_wind_speed", temperature: "sensor.temp" } });
+  const { calls } = await renderCard({ period: "30d" }, { states: { s: withMeasures } });
+  const numeric = calls.find((call) => call.type === "recorder/statistics_during_period" && call.types.includes("mean"));
+  assert.ok(numeric.statistic_ids.includes("sensor.jardin_wind_speed"));
+  // The same entity is asked once.
+  assert.equal(numeric.statistic_ids.filter((id) => id === "sensor.temp").length, 1);
+});
+
 test("switches period on click and reloads", async () => {
   const { card, calls } = await renderCard();
   const before = calls.length;
@@ -389,7 +405,7 @@ test("an older cached card already registered shows a reload banner", () => {
   const old = new OldCard();
   old.attachShadow();
   old._render();
-  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.6\.1\) est installée/);
+  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.0\) est installée/);
   assert.match(old.shadowRoot.innerHTML, /ancienne carte/);
   // Rendered again: still one banner.
   old._render();

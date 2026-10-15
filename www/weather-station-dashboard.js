@@ -308,6 +308,16 @@ function wsdStatisticsPoints(answer, statisticId) {
     .sort((a, b) => a.t - b.t);
 }
 
+/**
+ * Points of the source sensor completed by those of the station's own copy:
+ * the source keeps its older statistics, the copy fills in what the source
+ * does not record (no state_class) or no longer records (sensor replaced).
+ */
+function wsdMergePoints(primary, secondary) {
+  const times = new Set(primary.map((point) => point.t));
+  return [...primary, ...secondary.filter((point) => !times.has(point.t))].sort((a, b) => a.t - b.t);
+}
+
 function wsdMinMax(points, since = -Infinity) {
   const values = points.filter((point) => point.t >= since && point.v !== null).map((point) => point.v);
   return values.length ? { min: Math.min(...values), max: Math.max(...values) } : null;
@@ -402,7 +412,7 @@ function wsdStations(hass) {
 }
 
 // Version of this file, kept equal to the integration's manifest version.
-const WSD_VERSION = "0.6.1";
+const WSD_VERSION = "0.7.0";
 const WSD_OUTDATED_TEXT = {
   fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
   en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
@@ -602,7 +612,9 @@ class WeatherStationDashboardCard extends HTMLElement {
     const period = this._period;
     const config = WSD_PERIODS[period];
     const entities = station.attributes.entities || {};
+    const measures = station.attributes.measures || {};
     const numeric = WSD_NUMERIC.filter((key) => entities[key]);
+    const statisticIds = [...new Set(numeric.flatMap((key) => [entities[key], measures[key]]).filter(Boolean))];
     const now = Date.now();
     const start = now - config.ms;
     const iso = (time) => new Date(time).toISOString();
@@ -629,7 +641,7 @@ class WeatherStationDashboardCard extends HTMLElement {
         type: "recorder/statistics_during_period",
         start_time: iso(start),
         end_time: iso(now),
-        statistic_ids: numeric.map((key) => entities[key]),
+        statistic_ids: statisticIds,
         period: config.statistics,
         types: ["mean", "min", "max"],
       }) : null,
@@ -677,12 +689,17 @@ class WeatherStationDashboardCard extends HTMLElement {
 
   _series(key) {
     const data = this._data;
-    const id = this._station()?.attributes?.entities?.[key];
+    const attributes = this._station()?.attributes;
+    const id = attributes?.entities?.[key];
     if (!data || !id) return [];
     if (data.period === "24h" || !data.statistics) {
       return wsdHistoryPoints(data.recent, id).filter((point) => point.t >= data.start);
     }
-    return wsdStatisticsPoints(data.statistics, id);
+    const measure = attributes.measures?.[key];
+    return wsdMergePoints(
+      wsdStatisticsPoints(data.statistics, id),
+      measure ? wsdStatisticsPoints(data.statistics, measure) : [],
+    );
   }
 
   _rainBars() {

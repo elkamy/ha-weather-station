@@ -223,6 +223,7 @@ show_chart: true                           # pluie heure par heure sur 24 h
 | Point de rosée, Température ressentie | °C, avec un capteur de température et un capteur d'humidité |
 | Risque de gel | Avec un capteur de température (voir [Alertes](#alertes)) |
 | Vent fort | Avec un capteur de rafales ou de vent (voir [Alertes](#alertes)) |
+| Température, Humidité, Pression, Vent moyen, Rafales, Direction du vent, Indice UV, Luminosité, Rayonnement solaire | Une entité par capteur choisi : copie du relevé dans une unité fixe, affichée dans l'unité du capteur d'origine, avec statistiques longue durée même si le capteur d'origine n'en a pas (graphiques 7 et 30 jours). |
 | Entité météo | `weather.<station>` (voir [Entité météo](#entité-météo)) |
 
 ## Désinstallation

@@ -155,6 +155,33 @@
       },
       "feels_like": {
         "name": "Température ressentie"
+      },
+      "temperature": {
+        "name": "Température"
+      },
+      "humidity": {
+        "name": "Humidité"
+      },
+      "pressure": {
+        "name": "Pression"
+      },
+      "wind_speed": {
+        "name": "Vent moyen"
+      },
+      "wind_gust": {
+        "name": "Rafales"
+      },
+      "wind_direction": {
+        "name": "Direction du vent"
+      },
+      "uv_index": {
+        "name": "Indice UV"
+      },
+      "illuminance": {
+        "name": "Luminosité"
+      },
+      "solar_radiation": {
+        "name": "Rayonnement solaire"
       }
     },
     "binary_sensor": {
