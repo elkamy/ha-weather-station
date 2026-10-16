@@ -448,9 +448,35 @@ class MeasureSensor(SensorEntity):
         result = convert_reading(description.converter, value, unit, description.unit)
         return None if result is None else round(result, 2)
 
+    @callback
+    def _adopt_source_unit(self) -> None:
+        """Show the source's unit when it was unknown at registration.
+
+        The suggested unit only applies when the entity is first registered: a
+        sleeping anemometer then gave none. Done once, and never over a unit
+        chosen in the entity settings.
+        """
+        converter = self._description.converter
+        _value, unit = _reading(self.hass, self._source)
+        if not converter or not unit or unit == self._description.unit or unit not in converter.VALID_UNITS:
+            return
+        registry = er.async_get(self.hass)
+        entry = registry.async_get(self.entity_id) if self.entity_id else None
+        if entry is None:
+            return
+        if entry.options.get("sensor", {}).get("unit_of_measurement"):
+            return
+        if entry.options.get("sensor.private", {}).get("suggested_unit_of_measurement"):
+            return
+        registry.async_update_entity_options(
+            self.entity_id, "sensor", {**entry.options.get("sensor", {}), "unit_of_measurement": unit}
+        )
+
     async def async_added_to_hass(self) -> None:
         @callback
         def _changed(_event: Event) -> None:
+            self._adopt_source_unit()
             self.async_write_ha_state()
 
+        self._adopt_source_unit()
         self.async_on_remove(async_track_state_change_event(self.hass, [self._source], _changed))

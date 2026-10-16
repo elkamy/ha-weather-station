@@ -215,9 +215,16 @@ test("draws the 24 h charts from the raw history", async () => {
   // Hourly rain from the station: two hours with rain.
   assert.match(html, /4,2 mm sur la période/);
   assert.equal((html.match(/data-chart="bar-rain"[^]*?<\/svg>/)[0].match(/class="bar"/g) || []).length, 2);
-  // The unavailable wind reading breaks the line into two parts.
-  const windPath = html.match(/data-chart="line-wind"[^]*?class="line s1" d="([^"]+)"/)[1];
-  assert.equal((windPath.match(/M/g) || []).length, 2);
+  // Raw history is drawn in steps: each value holds until the next one.
+  const temperaturePath = html.match(/data-chart="line-temperature"[^]*?class="line s1" d="([^"]+)"/)[1];
+  assert.match(temperaturePath, /^M[\d.]+ [\d.]+H[\d.]+V/);
+  // Wind: bars of mean wind per half hour, gust ticks on top, arrows below.
+  const wind = html.match(/data-chart="wind"[^]*?<\/svg>/)[0];
+  assert.ok((wind.match(/class="bar"/g) || []).length >= 3);
+  assert.ok((wind.match(/class="gust"/g) || []).length >= 3);
+  assert.match(html, /class="arrows"/);
+  assert.match(html, /title="du NO"/);
+  assert.match(html, /<i class="key bar"><\/i>Vent moyen <strong>18 km\/h/);
   // Wind from the north-west 3 hours out of 4 (the last reading has no duration yet).
   assert.match(html, /Vent dominant du NO \(100 % du temps\)/);
 });
@@ -232,6 +239,34 @@ test("uses statistics for 7 and 30 days, with today's rain from the station", as
   assert.match(html, /class="band s1"/);
   assert.match(html, /Fréquence des directions sur 7 jours/);
   assert.match(html, /aria-pressed="true" class="selected">30 jours/);
+});
+
+test("aggregates the wind per bucket", () => {
+  const H = 3600 * 1000;
+  const buckets = [[0, H], [H, 2 * H]];
+  // 10 for 15 min, then 20 for 45 min, then 4 for the next hour.
+  const points = [{ t: -H, v: 10 }, { t: 0.25 * H, v: 20 }, { t: H, v: 4 }];
+  const result = context.wsdHistoryBuckets(points, buckets, 2 * H);
+  assert.equal(result[0].mean, 17.5);
+  assert.equal(result[0].max, 20);
+  assert.equal(result[1].mean, 4);
+
+  const stats = [{ t: 0, v: 3, max: 9 }, { t: 0.5 * H, v: 5, max: 7 }, { t: H, v: null, max: null }];
+  const fromStats = context.wsdStatisticBuckets(stats, buckets);
+  assert.equal(fromStats[0].mean, 4);
+  assert.equal(fromStats[0].max, 9);
+  assert.equal(fromStats[1].mean, null);
+
+  // 350° and 10° average to the north, not to the south.
+  const north = context.wsdDirectionBuckets([{ t: 0, v: 350 }, { t: 0.5 * H, v: 10 }], [[0, H]], H)[0];
+  assert.ok(north < 0.001 || north > 359.999);
+  assert.equal(context.wsdDirectionBuckets([], [[0, H]], H)[0], null);
+
+  const end = Date.now();
+  const halfHours = context.wsdWindBuckets(end - 24 * H, end, "24h");
+  assert.ok(halfHours.length === 48 || halfHours.length === 49);
+  assert.equal(halfHours[halfHours.length - 1][1], end);
+  assert.ok(context.wsdWindBuckets(end - 30 * 24 * H, end, "30d").length >= 30);
 });
 
 test("completes the source statistics with the station's own copy", async () => {
@@ -405,7 +440,7 @@ test("an older cached card already registered shows a reload banner", () => {
   const old = new OldCard();
   old.attachShadow();
   old._render();
-  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.0\) est installée/);
+  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.1\) est installée/);
   assert.match(old.shadowRoot.innerHTML, /ancienne carte/);
   // Rendered again: still one banner.
   old._render();

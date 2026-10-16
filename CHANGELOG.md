@@ -1,5 +1,14 @@
 # Journal des modifications
 
+## [0.7.1] — 2026-10-16
+
+### Ajouté
+- **Nouveau graphique du vent**, comme sur les sites de prévisions : une barre de vent moyen par tranche (30 minutes sur 24 h, 3 heures sur 7 jours, un jour sur 30 jours), la rafale la plus forte de la tranche en repère au-dessus, et une flèche de direction en dessous. Le survol donne le vent moyen, la rafale et la provenance de chaque tranche.
+
+### Corrigé
+- Sur 24 h, les courbes sont tracées en paliers : chaque valeur reste affichée jusqu'à la suivante, comme Home Assistant l'enregistre, au lieu d'une ligne droite qui inventait des valeurs intermédiaires (par exemple une rafale qui semblait monter toute la nuit).
+- Les relevés de la station prennent l'unité d'affichage du capteur d'origine même s'il était en veille à leur création (un anémomètre en m/s s'affichait en km/h).
+
 ## [0.7.0] — 2026-10-15
 
 ### Ajouté

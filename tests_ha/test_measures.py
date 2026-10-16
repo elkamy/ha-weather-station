@@ -75,6 +75,27 @@ async def test_measures_in_fixed_units_with_statistics(hass: HomeAssistant) -> N
     assert hass.states.get(wind.entity_id).state == "unknown"
 
 
+async def test_unit_adopted_when_the_source_wakes_up(hass: HomeAssistant) -> None:
+    # A sleeping anemometer: no unit known when the station sensor is registered.
+    hass.states.async_set("sensor.wind", "unavailable")
+    entry = await _setup(hass, wind_speed_entity="sensor.wind")
+    wind = _measure(hass, entry, "wind_speed")
+    assert hass.states.get(wind).attributes["unit_of_measurement"] == "km/h"
+
+    hass.states.async_set("sensor.wind", "2", {"unit_of_measurement": "m/s"})
+    await hass.async_block_till_done()
+    state = hass.states.get(wind)
+    assert state.attributes["unit_of_measurement"] == "m/s"
+    assert float(state.state) == 2.0
+
+    # A unit chosen in the entity settings is never replaced.
+    er.async_get(hass).async_update_entity_options(wind, "sensor", {"unit_of_measurement": "km/h"})
+    await hass.async_block_till_done()
+    hass.states.async_set("sensor.wind", "3", {"unit_of_measurement": "m/s"})
+    await hass.async_block_till_done()
+    assert hass.states.get(wind).attributes["unit_of_measurement"] == "km/h"
+
+
 async def test_measure_removed_with_its_sensor(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.wind", "5", {"unit_of_measurement": "km/h"})
     entry = await _setup(hass, wind_speed_entity="sensor.wind")

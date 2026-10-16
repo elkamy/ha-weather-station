@@ -40,6 +40,8 @@ const WSD_TEXT = {
     wind_gust: "Rafales",
     wind_direction: "Direction",
     windFrom: (cardinal) => `du ${cardinal}`,
+    windOrigin: "Provenance",
+    windChartLabel: (mean, gust) => `Vent : moyenne jusqu'à ${mean}, rafales jusqu'à ${gust}`,
     rain: "Pluie",
     rainToday: "Aujourd'hui",
     rainRate: "Intensité",
@@ -110,6 +112,8 @@ const WSD_TEXT = {
     wind_gust: "Gusts",
     wind_direction: "Direction",
     windFrom: (cardinal) => `from ${cardinal}`,
+    windOrigin: "From",
+    windChartLabel: (mean, gust) => `Wind: mean up to ${mean}, gusts up to ${gust}`,
     rain: "Rain",
     rainToday: "Today",
     rainRate: "Rate",
@@ -155,6 +159,10 @@ const WSD_REFRESH_MS = 5 * 60 * 1000;
 const WSD_CARDINALS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 const WSD_BEAUFORT_KMH = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
 const WSD_TO_KMH = { "km/h": 1, "m/s": 3.6, mph: 1.609344, kn: 1.852, "ft/s": 1.09728 };
+// Wind chart: one bar of mean wind per bucket, its gust on top, its direction below.
+const WSD_WIND_BUCKETS = { "24h": 30 * 60 * 1000, "7d": 3 * 3600 * 1000, "30d": 24 * 3600 * 1000 };
+// At most this many direction arrows, so they stay readable on a phone.
+const WSD_MAX_ARROWS = 24;
 // Line charts, in display order: the series of each chart in fixed slot order.
 const WSD_LINE_CHARTS = [
   { key: "temperature", series: ["temperature", "feels_like", "dew_point"] },
@@ -412,7 +420,7 @@ function wsdStations(hass) {
 }
 
 // Version of this file, kept equal to the integration's manifest version.
-const WSD_VERSION = "0.7.0";
+const WSD_VERSION = "0.7.1";
 const WSD_OUTDATED_TEXT = {
   fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
   en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
@@ -486,17 +494,27 @@ function wsdDefine(tag, component, renderMethod = null) {
 const WSD_W = 1000;
 const WSD_H = 200;
 
-function wsdPath(points, x, y) {
+/**
+ * SVG path of a series. With `stepEnd` (raw history), each value holds until
+ * the next one, as recorded, and the last one until `stepEnd`: Home Assistant
+ * only stores changes, so a straight line between two of them would invent
+ * values. Statistics (means of each hour or day) are joined by lines.
+ */
+function wsdPath(points, x, y, stepEnd = null) {
   let path = "";
   let open = false;
   for (const point of points) {
     if (point.v === null) {
+      if (open && stepEnd !== null) path += `H${x(point.t).toFixed(1)}`;
       open = false;
       continue;
     }
-    path += `${open ? "L" : "M"}${x(point.t).toFixed(1)} ${y(point.v).toFixed(1)}`;
+    path += open && stepEnd !== null
+      ? `H${x(point.t).toFixed(1)}V${y(point.v).toFixed(1)}`
+      : `${open ? "L" : "M"}${x(point.t).toFixed(1)} ${y(point.v).toFixed(1)}`;
     open = true;
   }
+  if (open && stepEnd !== null) path += `H${stepEnd.toFixed(1)}`;
   return path;
 }
 
@@ -506,6 +524,90 @@ function wsdBand(points, x, y) {
   const top = valid.map((point) => `${x(point.t).toFixed(1)} ${y(point.max).toFixed(1)}`);
   const bottom = valid.slice().reverse().map((point) => `${x(point.t).toFixed(1)} ${y(point.min).toFixed(1)}`);
   return `M${top.join("L")}L${bottom.join("L")}Z`;
+}
+
+/** A bar standing on the baseline, its data end rounded. */
+function wsdBarPath(left, width, top) {
+  const height = WSD_H - top;
+  const r = Math.min(4, width / 2, height);
+  return `M${left.toFixed(1)} ${WSD_H}V${(top + r).toFixed(1)}Q${left.toFixed(1)} ${top.toFixed(1)} ${(left + r).toFixed(1)} ${top.toFixed(1)}`
+    + `H${(left + width - r).toFixed(1)}Q${(left + width).toFixed(1)} ${top.toFixed(1)} ${(left + width).toFixed(1)} ${(top + r).toFixed(1)}V${WSD_H}Z`;
+}
+
+/** [from, to] of each wind bucket: half hours, 3 hours or local days. */
+function wsdWindBuckets(start, end, period) {
+  const size = WSD_WIND_BUCKETS[period];
+  const date = new Date(start);
+  if (period === "30d") {
+    date.setHours(0, 0, 0, 0);
+  } else if (period === "7d") {
+    date.setMinutes(0, 0, 0);
+    date.setHours(date.getHours() - (date.getHours() % 3));
+  } else {
+    date.setSeconds(0, 0);
+    date.setMinutes(date.getMinutes() < 30 ? 0 : 30);
+  }
+  const starts = [];
+  while (date.getTime() < end) {
+    starts.push(date.getTime());
+    if (period === "30d") date.setDate(date.getDate() + 1);
+    else date.setTime(date.getTime() + size);
+  }
+  return starts.map((from, index) => [from, starts[index + 1] ?? end]);
+}
+
+/** Overlap in ms of each recorded value of a history series with [from, to]. */
+function wsdOverlaps(points, from, to, end) {
+  return points.map((point, index) => {
+    if (point.v === null) return 0;
+    return Math.max(Math.min(points[index + 1]?.t ?? end, to) - Math.max(point.t, from), 0);
+  });
+}
+
+/** Time-weighted mean and maximum of a raw history series in each bucket. */
+function wsdHistoryBuckets(points, buckets, end) {
+  return buckets.map(([from, to]) => {
+    const overlaps = wsdOverlaps(points, from, to, end);
+    let weighted = 0;
+    let duration = 0;
+    let max = null;
+    points.forEach((point, index) => {
+      if (!overlaps[index]) return;
+      weighted += point.v * overlaps[index];
+      duration += overlaps[index];
+      max = max === null ? point.v : Math.max(max, point.v);
+    });
+    return { mean: duration ? weighted / duration : null, max };
+  });
+}
+
+/** Mean of the means and highest maximum of the statistics in each bucket. */
+function wsdStatisticBuckets(points, buckets) {
+  return buckets.map(([from, to]) => {
+    const inside = points.filter((point) => point.t >= from && point.t < to && point.v !== null);
+    if (!inside.length) return { mean: null, max: null };
+    return {
+      mean: inside.reduce((sum, point) => sum + point.v, 0) / inside.length,
+      max: Math.max(...inside.map((point) => point.max ?? point.v)),
+    };
+  });
+}
+
+/** Time-weighted circular mean of the wind direction in each bucket (°, or null). */
+function wsdDirectionBuckets(points, buckets, end) {
+  return buckets.map(([from, to]) => {
+    const overlaps = wsdOverlaps(points, from, to, end);
+    let east = 0;
+    let north = 0;
+    points.forEach((point, index) => {
+      if (!overlaps[index]) return;
+      const radians = (point.v * Math.PI) / 180;
+      east += Math.sin(radians) * overlaps[index];
+      north += Math.cos(radians) * overlaps[index];
+    });
+    if (Math.hypot(east, north) < 1e-9) return null;
+    return ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360;
+  });
 }
 
 class WeatherStationDashboardCard extends HTMLElement {
@@ -978,7 +1080,7 @@ class WeatherStationDashboardCard extends HTMLElement {
     for (const chart of WSD_LINE_CHARTS) {
       const keys = chart.series.filter((key) => entities[key]);
       if (!keys.length) continue;
-      charts.push(this._lineChart(chart, keys, language, T));
+      charts.push(chart.key === "wind" ? this._windChart(keys, language, T) : this._lineChart(chart, keys, language, T));
       if (chart.key === "wind" && entities.wind_direction) charts.push(this._roseChart(language, T));
     }
     if (!entities.wind_speed && entities.wind_direction) charts.push(this._roseChart(language, T));
@@ -1005,7 +1107,8 @@ class WeatherStationDashboardCard extends HTMLElement {
     const digits = wsdDigits(keys[0], unit);
     const grid = scale.ticks.map((tick) => `<line class="grid" x1="0" x2="${WSD_W}" y1="${y(tick).toFixed(1)}" y2="${y(tick).toFixed(1)}"></line>`).join("");
     const bands = data.period === "24h" ? "" : series.slice(0, 1).map((serie) => `<path class="band s${serie.slot}" d="${wsdBand(serie.points, x, y)}"></path>`).join("");
-    const lines = series.map((serie) => `<path class="line s${serie.slot}" d="${wsdPath(serie.points, x, y)}"></path>`).join("");
+    const stepEnd = data.period === "24h" || !data.statistics ? x(data.end) : null;
+    const lines = series.map((serie) => `<path class="line s${serie.slot}" d="${wsdPath(serie.points, x, y, stepEnd)}"></path>`).join("");
     const last = (serie) => [...serie.points].reverse().find((point) => point.v !== null)?.v ?? null;
     const legend = series.length > 1 ? `<div class="legend">${series.map((serie) => `
       <span><i class="key s${serie.slot}"></i>${wsdEscape(serie.label)} <strong>${wsdEscape(wsdWithUnit(last(serie), unit, language, digits))}</strong></span>`).join("")}</div>` : "";
@@ -1024,6 +1127,100 @@ class WeatherStationDashboardCard extends HTMLElement {
     return this._chartFrame(id, title, unit, "", body);
   }
 
+  /** Mean wind, gust and direction of each bucket of the period. */
+  _windData(keys) {
+    const data = this._data;
+    const entities = this._station().attributes.entities || {};
+    const buckets = wsdWindBuckets(data.start, data.end, data.period);
+    const raw = data.period === "24h" || !data.statistics;
+    const aggregate = (key) => {
+      if (!keys.includes(key)) return null;
+      // Raw history: every recorded value, the one in force at the start included.
+      return raw
+        ? wsdHistoryBuckets(wsdHistoryPoints(data.recent, entities[key]), buckets, data.end)
+        : wsdStatisticBuckets(this._series(key), buckets);
+    };
+    const mean = aggregate("wind_speed");
+    const gust = aggregate("wind_gust");
+    const directionId = entities.wind_direction;
+    const directions = directionId
+      ? wsdDirectionBuckets(
+        wsdHistoryPoints(data.period === "24h" ? data.recent : data.rose, directionId, wsdParseDirection),
+        buckets,
+        data.end,
+      )
+      : buckets.map(() => null);
+    return buckets.map(([from, to], index) => ({
+      t: from,
+      to,
+      mean: mean ? mean[index].mean : null,
+      gust: gust ? gust[index].max : null,
+      direction: directions[index],
+    }));
+  }
+
+  _windChart(keys, language, T) {
+    const data = this._data;
+    const a = this._station().attributes;
+    const unit = a[`${keys[0]}_unit`] || "";
+    const id = "wind";
+    const buckets = this._windData(keys);
+    const values = buckets.flatMap((bucket) => [bucket.mean, bucket.gust]).filter((value) => value !== null);
+    if (!values.length) return this._chartFrame(id, T.wind, unit, "", `<div class="chart-empty">${wsdEscape(T.noData)}</div>`);
+    const highest = Math.max(...values);
+    const scale = wsdScale(0, highest > 0 ? highest : 1, 4, 0);
+    const span = data.end - data.start;
+    const x = (time) => ((Math.min(Math.max(time, data.start), data.end) - data.start) / span) * WSD_W;
+    const y = (value) => WSD_H - (value / (scale.max || 1)) * WSD_H;
+    const digits = wsdDigits("wind_speed", unit);
+    const grid = scale.ticks.map((tick) => `<line class="grid" x1="0" x2="${WSD_W}" y1="${y(tick).toFixed(1)}" y2="${y(tick).toFixed(1)}"></line>`).join("");
+    const marks = buckets.map((bucket, index) => {
+      const left = x(bucket.t);
+      const slot = x(bucket.to) - left;
+      if (slot <= 0) return "";
+      // Thin bars with air between them; the gust tick is a little wider.
+      const width = Math.max(slot * 0.7, 1);
+      const bar = bucket.mean > 0
+        ? `<path class="bar" data-index="${index}" d="${wsdBarPath(left + (slot - width) / 2, width, Math.min(y(bucket.mean), WSD_H - 2))}"></path>`
+        : "";
+      const tick = bucket.gust > 0
+        ? `<line class="gust" x1="${(left + slot * 0.1).toFixed(1)}" x2="${(left + slot * 0.9).toFixed(1)}" y1="${y(bucket.gust).toFixed(1)}" y2="${y(bucket.gust).toFixed(1)}"></line>`
+        : "";
+      return bar + tick;
+    }).join("");
+    // Arrows point where the wind blows to; none in a calm bucket.
+    const every = Math.ceil(buckets.length / WSD_MAX_ARROWS);
+    const arrows = buckets.map((bucket, index) => {
+      const windy = (bucket.mean ?? 0) > 0 || (bucket.gust ?? 0) > 0;
+      if (index % every || bucket.direction === null || !windy) return "";
+      const center = ((x(bucket.t) + x(bucket.to)) / 2 / WSD_W) * 100;
+      const cardinal = wsdCardinal(bucket.direction, language);
+      return `<span style="left:${center.toFixed(2)}%" title="${wsdEscape(T.windFrom(cardinal))}"><svg viewBox="0 0 10 10" style="transform:rotate(${Math.round(bucket.direction + 180)}deg)"><path d="M5 0.5L8.5 9L5 7L1.5 9Z"></path></svg></span>`;
+    }).join("");
+    const hasArrows = arrows.length > 0;
+    const legend = `<div class="legend">
+      ${keys.includes("wind_speed") ? `<span><i class="key bar"></i>${wsdEscape(T.wind_speed)} <strong>${wsdEscape(wsdWithUnit(a.wind_speed, unit, language, digits))}</strong></span>` : ""}
+      ${keys.includes("wind_gust") ? `<span><i class="key s2"></i>${wsdEscape(T.wind_gust)} <strong>${wsdEscape(wsdWithUnit(a.wind_gust, a.wind_gust_unit || unit, language, digits))}</strong></span>` : ""}
+      ${hasArrows ? `<span><i class="key arrow"><svg viewBox="0 0 10 10"><path d="M5 0.5L8.5 9L5 7L1.5 9Z"></path></svg></i>${wsdEscape(T.windOrigin)}</span>` : ""}
+    </div>`;
+    const maxOf = (field) => {
+      const list = buckets.map((bucket) => bucket[field]).filter((value) => value !== null);
+      return list.length ? wsdWithUnit(Math.max(...list), unit, language, digits) : "—";
+    };
+    const label = T.windChartLabel(maxOf("mean"), maxOf("gust"));
+    this._charts[id] = { kind: "wind", buckets, start: data.start, end: data.end, unit, digits, language, period: data.period };
+    const body = `
+      ${legend}
+      <div class="plot${hasArrows ? " with-arrows" : ""}" data-chart="${id}">
+        ${this._yTicks(scale, y, unit, language, digits)}
+        <svg viewBox="0 0 ${WSD_W} ${WSD_H}" preserveAspectRatio="none" role="img" aria-label="${wsdEscape(label)}">${grid}<line class="baseline" x1="0" x2="${WSD_W}" y1="${WSD_H}" y2="${WSD_H}"></line>${marks}</svg>
+        ${hasArrows ? `<div class="arrows" aria-hidden="true">${arrows}</div>` : ""}
+        ${this._xTicks(data.start, data.end, data.period, language)}
+        <div class="tooltip" role="status"></div>
+      </div>`;
+    return this._chartFrame(id, T.wind, unit, "", body);
+  }
+
   _barChart(id, title, subtitle, bars, start, end, ticksHtml, language, T, label) {
     const values = bars.map((bar) => bar.v).filter((value) => value !== null);
     const max = Math.max(...values, 0);
@@ -1037,9 +1234,7 @@ class WeatherStationDashboardCard extends HTMLElement {
       if (!bar.v) return "";
       const height = Math.max(WSD_H - y(bar.v), 2);
       const left = index * slot + (slot - width) / 2;
-      const r = Math.min(4, width / 2, height);
-      const top = WSD_H - height;
-      return `<path class="bar" data-index="${index}" d="M${left.toFixed(1)} ${WSD_H}V${(top + r).toFixed(1)}Q${left.toFixed(1)} ${top.toFixed(1)} ${(left + r).toFixed(1)} ${top.toFixed(1)}H${(left + width - r).toFixed(1)}Q${(left + width).toFixed(1)} ${top.toFixed(1)} ${(left + width).toFixed(1)} ${(top + r).toFixed(1)}V${WSD_H}Z"></path>`;
+      return `<path class="bar" data-index="${index}" d="${wsdBarPath(left, width, WSD_H - height)}"></path>`;
     }).join("");
     this._charts[id] = { kind: "bar", bars, unit: "mm", digits: 1, language };
     const body = `
@@ -1189,6 +1384,24 @@ class WeatherStationDashboardCard extends HTMLElement {
       title = wsdFormatTime(bar.t, bar.style === "point" ? "point" : bar.style, chart.language);
       left = (index + 0.5) / chart.bars.length;
       rows.push({ slot: 1, label: T.rain, value: `${wsdNumber(bar.v, chart.language, 1)} mm` });
+    } else if (chart.kind === "wind") {
+      const time = chart.start + fraction * (chart.end - chart.start);
+      const index = chart.buckets.findIndex((bucket) => time >= bucket.t && time < bucket.to);
+      const bucket = chart.buckets[index];
+      plot.querySelectorAll(".bar.hover").forEach((element) => element.classList.remove("hover"));
+      if (!bucket || (bucket.mean === null && bucket.gust === null)) {
+        tooltip.classList.remove("visible");
+        return;
+      }
+      plot.querySelector(`.bar[data-index="${index}"]`)?.classList.add("hover");
+      title = chart.period === "30d"
+        ? wsdFormatTime(bucket.t, "day", chart.language)
+        : `${wsdFormatTime(bucket.t, "point", chart.language)} – ${wsdFormatTime(bucket.to, "tick24h", chart.language)}`;
+      const middle = (Math.max(bucket.t, chart.start) + bucket.to) / 2;
+      left = (middle - chart.start) / (chart.end - chart.start);
+      if (bucket.mean !== null) rows.push({ slot: 1, label: T.wind_speed, value: wsdWithUnit(bucket.mean, chart.unit, chart.language, chart.digits) });
+      if (bucket.gust !== null) rows.push({ slot: 2, label: T.wind_gust, value: wsdWithUnit(bucket.gust, chart.unit, chart.language, chart.digits) });
+      if (bucket.direction !== null) rows.push({ slot: 0, label: T.wind_direction, value: T.windFrom(wsdCardinal(bucket.direction, chart.language)) });
     } else if (chart.kind === "rose") {
       const petal = event.target.closest?.(".petal");
       plot.querySelectorAll(".petal.hover").forEach((element) => element.classList.remove("hover"));
@@ -1302,6 +1515,14 @@ class WeatherStationDashboardCard extends HTMLElement {
       .line.s1{stroke:var(--ws-s1)}.line.s2{stroke:var(--ws-s2)}.line.s3{stroke:var(--ws-s3);stroke-dasharray:6 4}
       .band{fill:var(--ws-s1);opacity:.1;stroke:none}
       .bar{fill:var(--ws-s1)}.bar.hover{fill:color-mix(in srgb,var(--ws-s1) 75%,#fff)}
+      .gust{stroke:var(--ws-s2);stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+      .key.bar{width:10px;height:10px;border:none;border-radius:2px;background:var(--ws-s1)}
+      .key.s0{width:0;border:none}
+      .key.arrow{width:12px;height:12px;border:none}.key.arrow svg,.arrows svg{display:block;width:100%;height:100%;fill:var(--ws-muted)}
+      .plot.with-arrows{margin-bottom:38px}
+      .arrows{position:absolute;left:0;right:0;bottom:-20px;height:14px}
+      .arrows span{position:absolute;width:12px;height:12px;transform:translateX(-50%)}
+      .plot.with-arrows .xticks{bottom:-36px}
       .yticks{position:absolute;inset:0 auto 0 -40px;width:34px}
       .yticks span{position:absolute;right:0;transform:translateY(-50%);font-size:11px;color:var(--ws-muted);font-variant-numeric:tabular-nums}
       .xticks{position:absolute;left:0;right:0;bottom:-20px;height:16px}

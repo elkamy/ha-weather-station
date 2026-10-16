@@ -127,7 +127,7 @@ function weatherStationAge(iso, T, now = Date.now()) {
 // registry while it starts: a card loaded from the cache may register on the
 // native one first, so register again once the frontend and Lovelace exist.
 // Version of this file, kept equal to the integration's manifest version.
-const WEATHER_STATION_VERSION = "0.7.0";
+const WEATHER_STATION_VERSION = "0.7.1";
 const WEATHER_STATION_OUTDATED_TEXT = {
   fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
   en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
