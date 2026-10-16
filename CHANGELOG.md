@@ -1,5 +1,10 @@
 # Journal des modifications
 
+## [0.7.3] — 2026-10-16
+
+### Corrigé
+- Quand le vent est resté calme sur toute la période (moins de 1 km/h), la rose des vents est toujours dessinée, avec 100 % de calme au centre et la mention « Vent calme, sans direction dominante », au lieu d'un simple texte qui laissait croire qu'il n'y avait plus de données.
+
 ## [0.7.2] — 2026-10-16
 
 ### Ajouté

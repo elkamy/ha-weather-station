@@ -315,6 +315,28 @@ test("splits the wind rose by wind class with the calm share", () => {
   assert.equal(plain.speed, false);
 });
 
+test("draws the wind rose even when the wind stayed calm", async () => {
+  const H = 3600 * 1000;
+  const rose = context.wsdStackedRose([{ t: 0, v: 90 }], [{ t: 0, v: 0.1 }], "m/s", 2 * H);
+  assert.equal(rose.calm, 100);
+  const now = Date.now();
+  const calls = [];
+  const hass = fakeHass(now, calls, { s: station() });
+  const base = hass.callWS;
+  hass.callWS = async (message) => {
+    const answer = await base(message);
+    if (message.type !== "history/history_during_period") return answer;
+    return Object.fromEntries(Object.entries(answer).map(([id, states]) => [id, id === "sensor.wind" ? states.map((state) => ({ ...state, s: "0" })) : states]));
+  };
+  const card = new Card();
+  card.setConfig({});
+  card.hass = hass;
+  await settle();
+  const html = card.shadowRoot.innerHTML;
+  assert.match(html, /data-chart="rose"[^]*?class="calm"/);
+  assert.match(html, /Vent calme, sans direction dominante \(Calme 100 %\)/);
+});
+
 test("compares the wind with yesterday on demand", async () => {
   const { card } = await renderCard();
   assert.doesNotMatch(card.shadowRoot.innerHTML, /class="line yesterday"/);
@@ -497,7 +519,7 @@ test("an older cached card already registered shows a reload banner", () => {
   const old = new OldCard();
   old.attachShadow();
   old._render();
-  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.2\) est installée/);
+  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.3\) est installée/);
   assert.match(old.shadowRoot.innerHTML, /ancienne carte/);
   // Rendered again: still one banner.
   old._render();

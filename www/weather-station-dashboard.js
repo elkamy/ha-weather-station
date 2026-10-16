@@ -44,6 +44,7 @@ const WSD_TEXT = {
     wind_lull: "Accalmie",
     calm: "Calme",
     calmShare: (share) => `Calme ${share}`,
+    allCalm: "Vent calme, sans direction dominante",
     meanSpeed: "Vitesse moyenne",
     compare: "Comparer avec hier",
     yesterday: "Hier",
@@ -124,6 +125,7 @@ const WSD_TEXT = {
     wind_lull: "Lull",
     calm: "Calm",
     calmShare: (share) => `Calm ${share}`,
+    allCalm: "Calm wind, no prevailing direction",
     meanSpeed: "Mean speed",
     compare: "Compare with yesterday",
     yesterday: "Yesterday",
@@ -439,7 +441,7 @@ function wsdStations(hass) {
 }
 
 // Version of this file, kept equal to the integration's manifest version.
-const WSD_VERSION = "0.7.2";
+const WSD_VERSION = "0.7.3";
 const WSD_OUTDATED_TEXT = {
   fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
   en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
@@ -1432,13 +1434,9 @@ class WeatherStationDashboardCard extends HTMLElement {
     const rose = wsdStackedRose(directions, speeds, unit, data.end);
     const days = Math.round((data.end - since) / WSD_DAY_MS);
     const subtitle = T.windRoseSpan(days);
-    if (!rose || !rose.shares.some((share) => share > 0)) {
-      if (rose && rose.calm > 0) {
-        return this._chartFrame("rose", T.windRose, "", subtitle, `<div class="rose-caption">${wsdEscape(T.calmShare(`${wsdNumber(rose.calm, language, 0)} %`))}</div>`);
-      }
-      return this._chartFrame("rose", T.windRose, "", subtitle, `<div class="chart-empty">${wsdEscape(T.noData)}</div>`);
-    }
-    const max = Math.max(...rose.shares);
+    if (!rose) return this._chartFrame("rose", T.windRose, "", subtitle, `<div class="chart-empty">${wsdEscape(T.noData)}</div>`);
+    // Calm all along: the rose is still drawn, with its calm share in the centre.
+    const max = Math.max(...rose.shares) || 1;
     const inner = 14;
     const point = (angle, r) => `${(100 + Math.sin(angle) * r).toFixed(1)} ${(100 - Math.cos(angle) * r).toFixed(1)}`;
     const petals = rose.sectors.map((classes, index) => {
@@ -1466,8 +1464,10 @@ class WeatherStationDashboardCard extends HTMLElement {
       : "";
     const top = rose.shares.indexOf(max);
     this._charts.rose = { kind: "rose", rose, language, unit, digits: wsdDigits("wind_speed", unit) };
-    const label = T.roseLabel(wsdCardinal(top * 22.5, language), wsdNumber(max, language, 0));
-    const caption = rose.speed ? `${label} · ${T.calmShare(`${wsdNumber(rose.calm, language, 0)} %`)}` : label;
+    const calmText = T.calmShare(`${wsdNumber(rose.calm, language, 0)} %`);
+    const windy = rose.shares.some((share) => share > 0);
+    const label = windy ? T.roseLabel(wsdCardinal(top * 22.5, language), wsdNumber(max, language, 0)) : T.allCalm;
+    const caption = rose.speed && windy ? `${label} · ${calmText}` : rose.speed ? `${label} (${calmText})` : label;
     const body = `
       <div class="rose" data-chart="rose">
         <svg viewBox="0 0 200 200" role="img" aria-label="${wsdEscape(caption)}">${rings}${petals}${calm}${labels}</svg>
