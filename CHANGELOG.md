@@ -1,5 +1,17 @@
 # Journal des modifications
 
+## [0.7.2] — 2026-10-16
+
+### Ajouté
+- **Couleurs du vent** : les barres de vent moyen, les flèches de direction et la rose des vents sont colorées selon la force du vent (calme, puis 1–12, 12–20, 20–29, 29–39, 39–50 et 50 km/h ou plus, limites de l'échelle de Beaufort, affichées dans l'unité de la station), avec une légende. L'échelle va du clair au foncé et a sa propre version en thème sombre, pour rester lisible par les daltoniens.
+- **Rose des vents par force** : chaque direction est découpée selon la force du vent, la part de vent calme s'affiche au centre, et le survol donne la vitesse moyenne de chaque direction.
+- **Nuits grisées** sur les graphiques 24 h et 7 jours, d'après le lever et le coucher du soleil chez vous.
+- **Accalmie** : nouveau capteur facultatif de la station (le minimum de la période, par exemple *Wind Speed Min 10 mn* du WindNerd), en pointillé sur le graphique du vent et dans la tuile Vent.
+- **Comparer avec hier** : sur la vue 24 h, un bouton du graphique du vent ajoute la courbe du vent moyen de la veille.
+
+### Modifié
+- Les flèches de direction passent au-dessus du graphique du vent, et les rafales sont tracées dans la couleur du texte pour se détacher des barres colorées.
+
 ## [0.7.1] — 2026-10-16
 
 ### Ajouté

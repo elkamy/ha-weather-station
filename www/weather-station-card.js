@@ -28,6 +28,7 @@ const WEATHER_STATION_TEXT = {
     pressure: "Pression",
     wind_speed: "Vent",
     wind_gust: "Rafales",
+    wind_lull: "Accalmie",
     wind_direction: "Direction du vent",
     uv_index: "Indice UV",
     battery: "Batterie",
@@ -62,6 +63,7 @@ const WEATHER_STATION_TEXT = {
     pressure: "Pressure",
     wind_speed: "Wind",
     wind_gust: "Gusts",
+    wind_lull: "Lull",
     wind_direction: "Wind direction",
     uv_index: "UV index",
     battery: "Battery",
@@ -75,6 +77,7 @@ const WEATHER_STATION_EXTRAS = [
   { key: "pressure", icon: "mdi:gauge" },
   { key: "wind_speed", icon: "mdi:weather-windy" },
   { key: "wind_gust", icon: "mdi:weather-windy-variant" },
+  { key: "wind_lull", icon: "mdi:weather-windy" },
   { key: "wind_direction", icon: "mdi:compass-outline" },
   { key: "uv_index", icon: "mdi:sun-wireless" },
 ];
@@ -127,7 +130,7 @@ function weatherStationAge(iso, T, now = Date.now()) {
 // registry while it starts: a card loaded from the cache may register on the
 // native one first, so register again once the frontend and Lovelace exist.
 // Version of this file, kept equal to the integration's manifest version.
-const WEATHER_STATION_VERSION = "0.7.1";
+const WEATHER_STATION_VERSION = "0.7.2";
 const WEATHER_STATION_OUTDATED_TEXT = {
   fr: (version) => `Une nouvelle version de Weather Station (${version}) est installée : rechargez la page (Ctrl+Maj+R). Dans l'application : Paramètres › Débogage › Réinitialiser le cache du frontend.`,
   en: (version) => `A new version of Weather Station (${version}) is installed: reload the page (Ctrl+Shift+R). In the app: Settings › Debugging › Reset frontend cache.`,
@@ -321,7 +324,7 @@ class WeatherStationCard extends HTMLElement {
         }
         const unit = a[`${key}_unit`] || "";
         // Wind in m/s or knots needs a decimal (3.6 m/s), not in km/h or mph.
-        const fineWind = (key === "wind_speed" || key === "wind_gust") && ["m/s", "kn", "ft/s"].includes(unit);
+        const fineWind = ["wind_speed", "wind_gust", "wind_lull"].includes(key) && ["m/s", "kn", "ft/s"].includes(unit);
         const digits = key === "temperature" || key === "uv_index" || fineWind ? 1 : 0;
         return `<div class="extra" title="${weatherStationEscape(T[key])}"><ha-icon icon="${icon}"></ha-icon><span>${weatherStationNumber(value, language, digits)}${value === null || value === undefined ? "" : weatherStationEscape(unit ? ` ${unit}` : "")}</span></div>`;
       });

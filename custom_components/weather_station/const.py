@@ -8,6 +8,8 @@ CONF_HUMIDITY_ENTITY = "humidity_entity"
 CONF_PRESSURE_ENTITY = "pressure_entity"
 CONF_WIND_SPEED_ENTITY = "wind_speed_entity"
 CONF_WIND_GUST_ENTITY = "wind_gust_entity"
+# Lowest wind of the averaging period (WindNerd "Wind Speed Min 10 mn").
+CONF_WIND_LULL_ENTITY = "wind_lull_entity"
 CONF_WIND_DIRECTION_ENTITY = "wind_direction_entity"
 CONF_UV_ENTITY = "uv_index_entity"
 CONF_ILLUMINANCE_ENTITY = "illuminance_entity"
@@ -24,6 +26,7 @@ EXTRA_SENSORS = (
     (CONF_PRESSURE_ENTITY, "pressure"),
     (CONF_WIND_SPEED_ENTITY, "wind_speed"),
     (CONF_WIND_GUST_ENTITY, "wind_gust"),
+    (CONF_WIND_LULL_ENTITY, "wind_lull"),
     (CONF_WIND_DIRECTION_ENTITY, "wind_direction"),
     (CONF_UV_ENTITY, "uv_index"),
     (CONF_ILLUMINANCE_ENTITY, "illuminance"),

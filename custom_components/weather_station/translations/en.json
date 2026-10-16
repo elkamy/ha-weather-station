@@ -26,6 +26,7 @@
           "pressure_entity": "Atmospheric pressure",
           "wind_speed_entity": "Wind speed",
           "wind_gust_entity": "Wind gust",
+          "wind_lull_entity": "Wind lull (minimum)",
           "wind_direction_entity": "Wind direction (degrees or N, NE…)",
           "uv_index_entity": "UV index",
           "illuminance_entity": "Illuminance",
@@ -47,6 +48,7 @@
           "pressure_entity": "Atmospheric pressure",
           "wind_speed_entity": "Wind speed",
           "wind_gust_entity": "Wind gust",
+          "wind_lull_entity": "Wind lull (minimum)",
           "wind_direction_entity": "Wind direction (degrees or N, NE…)",
           "uv_index_entity": "UV index",
           "illuminance_entity": "Illuminance",
@@ -170,6 +172,9 @@
       },
       "wind_gust": {
         "name": "Wind gust"
+      },
+      "wind_lull": {
+        "name": "Wind lull"
       },
       "wind_direction": {
         "name": "Wind direction"

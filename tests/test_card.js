@@ -175,7 +175,7 @@ test("an older cached compact card shows a reload banner", () => {
   const old = new OldCard();
   old.attachShadow();
   old.render();
-  assert.match(old.shadowRoot.innerHTML, /ws-outdated[^]*Weather Station \(0\.7\.1\)/);
+  assert.match(old.shadowRoot.innerHTML, /ws-outdated[^]*Weather Station \(0\.7\.2\)/);
   const manifest = JSON.parse(fs.readFileSync("custom_components/weather_station/manifest.json", "utf8"));
   assert.equal(registry.get("weather-station-card").WS_VERSION, manifest.version);
 });

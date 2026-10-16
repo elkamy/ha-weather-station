@@ -96,6 +96,18 @@ async def test_unit_adopted_when_the_source_wakes_up(hass: HomeAssistant) -> Non
     assert hass.states.get(wind).attributes["unit_of_measurement"] == "km/h"
 
 
+async def test_wind_lull_is_a_station_reading(hass: HomeAssistant) -> None:
+    hass.states.async_set("sensor.lull", "1.5", {"unit_of_measurement": "m/s"})
+    entry = await _setup(hass, wind_lull_entity="sensor.lull")
+    lull = hass.states.get(_measure(hass, entry, "wind_lull"))
+    assert lull.attributes["device_class"] == "wind_speed"
+    assert float(lull.state) == 1.5
+    station = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_rain_today")
+    attributes = hass.states.get(station).attributes
+    assert attributes["wind_lull"] == 1.5
+    assert attributes["entities"]["wind_lull"] == "sensor.lull"
+
+
 async def test_measure_removed_with_its_sensor(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.wind", "5", {"unit_of_measurement": "km/h"})
     entry = await _setup(hass, wind_speed_entity="sensor.wind")

@@ -47,7 +47,7 @@ ATTR_CONFIG_ENTRY_ID = "config_entry_id"
 STORE_VERSION = 1
 CARD_FILES = ("weather-station-card.js", "weather-station-dashboard.js")
 # Bump when changing the card JavaScript to invalidate browser caches.
-CARD_VERSION = "0.7.1"
+CARD_VERSION = "0.7.2"
 DASHBOARD_URL = f"/{DOMAIN}/weather-station-dashboard.js?v={CARD_VERSION}"
 PANEL_TITLES = {"fr": "Météo", "en": "Weather"}
 

@@ -151,6 +151,9 @@ MEASURES = {
     "wind_gust": MeasureDescription(
         SensorDeviceClass.WIND_SPEED, UnitOfSpeed.KILOMETERS_PER_HOUR, SpeedConverter, 1
     ),
+    "wind_lull": MeasureDescription(
+        SensorDeviceClass.WIND_SPEED, UnitOfSpeed.KILOMETERS_PER_HOUR, SpeedConverter, 1
+    ),
     "wind_direction": MeasureDescription(
         SensorDeviceClass.WIND_DIRECTION if hasattr(SensorDeviceClass, "WIND_DIRECTION") else None,
         DEGREE,

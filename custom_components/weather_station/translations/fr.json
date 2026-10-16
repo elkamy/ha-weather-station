@@ -26,6 +26,7 @@
           "pressure_entity": "Pression atmosphérique",
           "wind_speed_entity": "Vitesse du vent",
           "wind_gust_entity": "Rafales de vent",
+          "wind_lull_entity": "Accalmies de vent (minimum)",
           "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
           "uv_index_entity": "Indice UV",
           "illuminance_entity": "Luminosité",
@@ -47,6 +48,7 @@
           "pressure_entity": "Pression atmosphérique",
           "wind_speed_entity": "Vitesse du vent",
           "wind_gust_entity": "Rafales de vent",
+          "wind_lull_entity": "Accalmies de vent (minimum)",
           "wind_direction_entity": "Direction du vent (degrés ou N, NE…)",
           "uv_index_entity": "Indice UV",
           "illuminance_entity": "Luminosité",
@@ -170,6 +172,9 @@
       },
       "wind_gust": {
         "name": "Rafales"
+      },
+      "wind_lull": {
+        "name": "Accalmie"
       },
       "wind_direction": {
         "name": "Direction du vent"

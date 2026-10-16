@@ -97,7 +97,8 @@ function fakeHass(now, calls, states = { "sensor.jardin_rain_today": station() }
     callWS: async (message) => {
       calls.push(message);
       if (message.type === "history/history_during_period") {
-        const all = history(now);
+        // The day before ("compare with yesterday"): the same readings, one day earlier.
+        const all = history(Date.parse(message.end_time) < now - 12 * HOUR ? now - 24 * HOUR : now);
         return Object.fromEntries(message.entity_ids.map((id) => [id, all[id] || []]));
       }
       if (message.statistic_ids[0] === "sensor.jardin_rain_total") {
@@ -203,7 +204,8 @@ test("shows the current readings in tiles", async () => {
 
 test("draws the 24 h charts from the raw history", async () => {
   const { html, calls } = await renderCard();
-  assert.equal(calls.filter((call) => call.type === "history/history_during_period").length, 1);
+  // The last 24 h, and the day before for the "compare with yesterday" wind curve.
+  assert.equal(calls.filter((call) => call.type === "history/history_during_period").length, 2);
   assert.equal(calls.some((call) => call.period === "hour"), false);
   for (const title of ["Pluie", "Température", "Humidité", "Pression", "Vent", "Rose des vents", "Pluie par mois en"]) {
     assert.match(html, new RegExp(`<h3>${title}`), title);
@@ -219,12 +221,16 @@ test("draws the 24 h charts from the raw history", async () => {
   const temperaturePath = html.match(/data-chart="line-temperature"[^]*?class="line s1" d="([^"]+)"/)[1];
   assert.match(temperaturePath, /^M[\d.]+ [\d.]+H[\d.]+V/);
   // Wind: bars of mean wind per half hour, gust ticks on top, arrows below.
-  const wind = html.match(/data-chart="wind"[^]*?<\/svg>/)[0];
-  assert.ok((wind.match(/class="bar"/g) || []).length >= 3);
+  const wind = html.match(/data-chart="wind"[^]*?role="img"[^]*?<\/svg>/)[0];
+  // Bars coloured by wind class: 5 km/h and 12 km/h are both in class 1 (1-12 km/h)
+  // or class 2 from 12 km/h.
+  assert.ok((wind.match(/class="bar w[12]"/g) || []).length >= 3);
   assert.ok((wind.match(/class="gust"/g) || []).length >= 3);
   assert.match(html, /class="arrows"/);
   assert.match(html, /title="du NO"/);
-  assert.match(html, /<i class="key bar"><\/i>Vent moyen <strong>18 km\/h/);
+  assert.match(html, /<i class="key bar w2"><\/i>Vent moyen <strong>18 km\/h/);
+  assert.match(html, /class="speed-scale"/);
+  assert.match(html, /data-compare aria-pressed="false">Comparer avec hier/);
   // Wind from the north-west 3 hours out of 4 (the last reading has no duration yet).
   assert.match(html, /Vent dominant du NO \(100 % du temps\)/);
 });
@@ -267,6 +273,57 @@ test("aggregates the wind per bucket", () => {
   assert.ok(halfHours.length === 48 || halfHours.length === 49);
   assert.equal(halfHours[halfHours.length - 1][1], end);
   assert.ok(context.wsdWindBuckets(end - 30 * 24 * H, end, "30d").length >= 30);
+});
+
+test("classifies the wind and finds the nights", () => {
+  assert.equal(context.wsdWindClass(0.5, "km/h"), 0);
+  assert.equal(context.wsdWindClass(5, "km/h"), 1);
+  assert.equal(context.wsdWindClass(4, "m/s"), 2);
+  assert.equal(context.wsdWindClass(60, "km/h"), 6);
+  assert.equal(context.wsdWindClass(null, "km/h"), null);
+
+  // Derval, 15 October 2026: sunrise about 08:15 and sunset about 19:10 (UTC+2).
+  const noon = Date.UTC(2026, 9, 15, 12);
+  const sun = context.wsdSunTimes(noon, 47.67, -1.67);
+  const hours = (time) => new Date(time).getUTCHours() + new Date(time).getUTCMinutes() / 60;
+  assert.ok(Math.abs(hours(sun.rise) - 6.25) < 0.25, String(hours(sun.rise)));
+  assert.ok(Math.abs(hours(sun.set) - 17.17) < 0.25, String(hours(sun.set)));
+  // Polar night: no sunrise.
+  assert.equal(context.wsdSunTimes(Date.UTC(2026, 11, 21, 12), 80, 0), null);
+
+  const nights = context.wsdNights(noon - 24 * 3600 * 1000, noon, 47.67, -1.67);
+  assert.equal(nights.length, 1);
+  assert.ok(nights[0][1] - nights[0][0] > 12 * 3600 * 1000);
+  assert.equal(context.wsdNights(0, 1, Number.NaN, 0).length, 0);
+});
+
+test("splits the wind rose by wind class with the calm share", () => {
+  const H = 3600 * 1000;
+  // North for 3 h, south for 1 h; calm the first hour, then 5 then 30 km/h.
+  const directions = [{ t: 0, v: 0 }, { t: 3 * H, v: 180 }];
+  const speeds = [{ t: 0, v: 0.2 }, { t: H, v: 5 }, { t: 2 * H, v: 30 }];
+  const rose = context.wsdStackedRose(directions, speeds, "km/h", 4 * H);
+  assert.equal(rose.calm, 25);
+  assert.equal(rose.shares[0], 50);
+  assert.equal(rose.sectors[0][1], 25);
+  assert.equal(rose.sectors[0][4], 25);
+  assert.equal(rose.shares[8], 25);
+  assert.equal(rose.mean[0], 17.5);
+  // Without a speed sensor, the plain direction frequency.
+  const plain = context.wsdStackedRose(directions, [], "", 4 * H);
+  assert.equal(plain.shares[0], 75);
+  assert.equal(plain.speed, false);
+});
+
+test("compares the wind with yesterday on demand", async () => {
+  const { card } = await renderCard();
+  assert.doesNotMatch(card.shadowRoot.innerHTML, /class="line yesterday"/);
+  card._onClick({ target: { closest: () => ({ dataset: { compare: "" } }) } });
+  await settle();
+  const html = card.shadowRoot.innerHTML;
+  assert.match(html, /data-compare aria-pressed="true"/);
+  assert.match(html, /class="line yesterday"/);
+  assert.match(html, /<i class="key yesterday"><\/i>Hier/);
 });
 
 test("completes the source statistics with the station's own copy", async () => {
@@ -440,7 +497,7 @@ test("an older cached card already registered shows a reload banner", () => {
   const old = new OldCard();
   old.attachShadow();
   old._render();
-  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.1\) est installée/);
+  assert.match(old.shadowRoot.innerHTML, /class="ws-outdated"[^>]*>Une nouvelle version de Weather Station \(0\.7\.2\) est installée/);
   assert.match(old.shadowRoot.innerHTML, /ancienne carte/);
   // Rendered again: still one banner.
   old._render();

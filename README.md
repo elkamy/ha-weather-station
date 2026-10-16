@@ -78,10 +78,10 @@ L'ajout d'une station se fait en deux étapes :
 2. **Les autres capteurs**, tous facultatifs :
    - la batterie du pluviomètre, proposée automatiquement ;
    - température, humidité et pression ;
-   - vitesse, rafales et direction du vent (la direction peut être en degrés ou en points cardinaux : `N`, `NE`, `NO`…) ;
+   - vitesse, rafales, accalmies (minimum) et direction du vent (la direction peut être en degrés ou en points cardinaux : `N`, `NE`, `NO`…) ;
    - indice UV, luminosité et rayonnement solaire.
 
-> **Anémomètre WindNerd** : le [WindNerd HQ](https://windnerd.net/docs/windnerd-hq) remonte dans Home Assistant par MQTT (découverte automatique). Choisissez ses moyennes sur 10 minutes : **Wind Speed Avg 10 mn** pour la vitesse, **Wind Gust 10 mn** pour les rafales et **Wind Direction Avg 10 mn** pour la direction. Évitez les valeurs *Live*, publiées toutes les 3 secondes : elles alourdissent l'historique et rendent les graphiques illisibles.
+> **Anémomètre WindNerd** : le [WindNerd HQ](https://windnerd.net/docs/windnerd-hq) remonte dans Home Assistant par MQTT (découverte automatique). Choisissez ses moyennes sur 10 minutes : **Wind Speed Avg 10 mn** pour la vitesse, **Wind Gust 10 mn** pour les rafales, **Wind Speed Min 10 mn** pour les accalmies et **Wind Direction Avg 10 mn** pour la direction. Évitez les valeurs *Live*, publiées toutes les 3 secondes : elles alourdissent l'historique et rendent les graphiques illisibles.
 
 Vous n'avez pas encore tous vos capteurs ? Ajoutez-les plus tard avec **Reconfigurer** depuis la carte de l'intégration. Le tableau de bord n'affiche que les relevés disponibles. Si vous retirez un capteur, les entités qui en dépendaient (risque de gel, point de rosée…) sont supprimées automatiquement.
 
@@ -189,7 +189,9 @@ period: 24h                                # période à l'ouverture : 24h, 7d o
 
 - **24 h** : les graphiques reprennent l'historique brut de Home Assistant, et la pluie est affichée heure par heure.
 - **7 et 30 jours** : les graphiques utilisent les **statistiques longue durée** (moyenne horaire ou journalière). Le premier capteur de chaque graphique montre aussi sa plage minimum–maximum. La pluie est affichée jour par jour.
-- **Rose des vents** : part du temps passé dans chaque direction, sur 24 h ou sur les 7 derniers jours.
+- **Vent** : une barre de vent moyen par tranche (30 minutes, 3 heures ou un jour), colorée selon la force du vent, la rafale au-dessus, l'accalmie en pointillé et une flèche de direction au-dessus du graphique. Sur 24 h, le bouton **Comparer avec hier** ajoute la courbe de la veille.
+- **Rose des vents** : part du temps passé dans chaque direction, découpée par force du vent, avec la part de calme au centre, sur 24 h ou sur les 7 derniers jours.
+- **Nuits** : grisées sur les graphiques 24 h et 7 jours, d'après le lever et le coucher du soleil à l'emplacement de votre Home Assistant.
 - **Prévisions** : avec une entité de prévisions (voir [Entité météo](#entité-météo)), une bande montre les 5 prochains jours (ciel, températures, pluie et probabilité) et l'en-tête donne l'état du ciel.
 
 Un capteur n'a de statistiques longue durée que s'il déclare une `state_class`. C'est le cas de la plupart des capteurs météo et de ceux créés par l'intégration.
@@ -223,7 +225,7 @@ show_chart: true                           # pluie heure par heure sur 24 h
 | Point de rosée, Température ressentie | °C, avec un capteur de température et un capteur d'humidité |
 | Risque de gel | Avec un capteur de température (voir [Alertes](#alertes)) |
 | Vent fort | Avec un capteur de rafales ou de vent (voir [Alertes](#alertes)) |
-| Température, Humidité, Pression, Vent moyen, Rafales, Direction du vent, Indice UV, Luminosité, Rayonnement solaire | Une entité par capteur choisi : copie du relevé dans une unité fixe, affichée dans l'unité du capteur d'origine, avec statistiques longue durée même si le capteur d'origine n'en a pas (graphiques 7 et 30 jours). |
+| Température, Humidité, Pression, Vent moyen, Rafales, Accalmie, Direction du vent, Indice UV, Luminosité, Rayonnement solaire | Une entité par capteur choisi : copie du relevé dans une unité fixe, affichée dans l'unité du capteur d'origine, avec statistiques longue durée même si le capteur d'origine n'en a pas (graphiques 7 et 30 jours). |
 | Entité météo | `weather.<station>` (voir [Entité météo](#entité-météo)) |
 
 ## Désinstallation
